@@ -1,81 +1,22 @@
 # Funnel
 
-> **Google AI Builder Cup 2026** · Theme: Future of Work · Stack: Gemini + FastAPI + Cloud Run + Firestore
+Google AI Builder Cup 2026 · Theme: Future of Work · Gemini + FastAPI + Cloud Run + Firestore
 
-## What it is
+Funnel helps people get unstuck on decisions they have been carrying around. You dump the decision; an AI that is **only allowed to ask questions** (a code-level guard rejects advice and plans) helps you see what makes it hard; you write your own conclusion and next step. A per-user ledger remembers it, so next time Funnel can say "this decision has come back" or "last time you had a similar worry".
 
-Funnel is a web app that helps you **see your own thinking clearly** on hard decisions.
-
-- You dump a messy, unresolved decision
-- The AI **only asks questions** — never plans, never advises
-- You reach your own conclusion and write your own next step
-- A **ledger** tracks decisions over time and surfaces patterns ("this worry has come up 3 times")
-
-**The session-2 moment** — when a past decision echoes into today's — is the demo's key frame.
-
-## Architecture
+Start here: **`user-instructions.md`** (setup, run, deploy). For people and AI agents building it: `AGENTS.md` and `agent/`.
 
 ```
-Browser (index.html, plain JS)
-   |
-FastAPI (app/main.py)
-   ├── session.py   turn loop: extract → match → guard → return
-   ├── guard.py     regex rules, retry once, log every rejection
-   ├── prompts.py   interrogator + extractor + observation prompts
-   ├── llm.py       generate_text / generate_structured / embed  (Gemini)
-   ├── matcher.py   embedding-based worry similarity (cosine)
-   ├── facts.py     pure code: counts, recurrence, days since
-   └── store.py     MemoryStore (dev) | FirestoreStore (prod)
+source .venv/bin/activate
+python scripts/check_setup.py
+python -m pytest -q
+uvicorn app.main:app --reload --port 8080
 ```
 
-Models used: `gemini-3.8-flash` (text), `gemini-embedding-001` (embeddings).
-
-## Guard (key differentiator)
-
-Every AI response is checked against regex rules before it reaches the browser.
-
-- **Hard reject:** advice verbs, numbered lists, invented options, closure phrases
-- **Soft flag:** forced-choice or leading questions (logged, not rejected)
-- On reject: retry once with stricter instruction → fall back to safe generic question
-- All rejections logged to `eval/rejections.log`
-
-See `tests/test_guard.py` for the 15-case test table.
-
-## Setup
-
-```bash
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env        # add your GEMINI_API_KEY
-python seed_demo.py         # optional: seed 2 demo decisions
-uvicorn app.main:app --reload
-# open http://localhost:8000
-```
-
-## Tests
-
-```bash
-pytest tests/ -v
-```
-
-## Cloud Run deploy
-
-```bash
-gcloud run deploy funnel \
-  --source . \
-  --region us-central1 \
-  --set-env-vars GEMINI_API_KEY=... \
-  --allow-unauthenticated
-```
-
-For Firestore: `--set-env-vars STORE_BACKEND=firestore`
-
-## What the judges will see
-
-| Feature | Where |
+| Piece | Where |
 |---|---|
-| Guard working | `eval/rejections.log` + stats bar in UI |
-| Memory ledger | Ledger button in UI |
-| Session-2 echo | Memory card + timeline in Discover state |
-| Code-counted facts | `facts.py` (no hallucination possible) |
-| Seeded demo data | Labeled "seeded demo" in yellow in the UI |
+| Guard (advice/plan rejection) | `app/guard.py`, `tests/test_guard.py` |
+| Counted facts (no hallucinated patterns) | `app/patterns.py` |
+| Loop and echo matching | `app/matcher.py`, `app/memory.py` |
+| Prompts | `app/prompts.py` |
+| Evals | `eval/run_eval.py` (guard numbers, question quality), `eval/run_match_eval.py` (matcher accuracy) |

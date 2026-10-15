@@ -1,3 +1,8 @@
+"""Pydantic models for the HTTP API and for structured model output.
+
+LLM-facing models avoid defaults and Literal types on purpose: Gemini's
+response_schema is most reliable with plain str/list fields. We validate in session.py.
+"""
 from __future__ import annotations
 
 from datetime import date
@@ -6,36 +11,30 @@ from typing import Literal, Optional
 from pydantic import BaseModel, Field
 
 
-class Turn(BaseModel):
-    """A single AI turn returned to the browser."""
-    type: Literal["question", "observation", "offer_commit"]
+# --- Structured output from Gemini ------------------------------------------------
+class ExtractionOut(BaseModel):
+    decision: str
+    options: list[str]
+    worries: list[str]
+
+
+class TurnOut(BaseModel):
+    type: str          # "question" or "observation"
     text: str
-    decision_ids: list[str] = Field(default_factory=list)  # IDs of echoed past decisions
 
 
-class Extraction(BaseModel):
-    """Structured fields the LLM extracts from the user's dump."""
-    decision: str       # one-line statement of what is being decided
-    worries: list[str]  # fears / concerns the user expressed
-    options: list[str]  # options the user mentioned (never invented)
+# --- HTTP request bodies (field names match index.html) ----------------------------
+class StartIn(BaseModel):
+    dump: str = Field(min_length=1)
+    direct_opt_in: bool = False
 
 
-class Commit(BaseModel):
-    """What the user resolves at the end of a session."""
-    conclusion: str
+class AnswerIn(BaseModel):
+    answer: str = Field(min_length=1)
+
+
+class CommitIn(BaseModel):
+    conclusion: str = Field(min_length=1)
     conclusion_kind: Literal["decided", "need_more_info", "parked"]
-    next_step: str
+    next_step: str = ""
     revisit_date: Optional[date] = None
-
-
-class Decision(BaseModel):
-    """One ledger entry (persisted to Firestore or memory store)."""
-    id: str
-    created_at: str                      # ISO-8601
-    dump: str                            # raw user dump
-    worries: list[str] = Field(default_factory=list)
-    options: list[str] = Field(default_factory=list)
-    conclusion: Optional[str] = None
-    next_step: Optional[str] = None
-    revisit_date: Optional[date] = None
-    embedding: Optional[list[float]] = None

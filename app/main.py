@@ -1,89 +1,95 @@
-"""
-main.py — FastAPI app with the 4 routes from Section 9.
-"""
+"""HTTP API. Route paths and field names match the existing index.html.
 
+POST /session              {dump, direct_opt_in?}  header X-User-Id  -> {session_id, first_turn, memory}
+POST /session/{id}/turn    {answer}                                  -> {type, text}
+POST /session/{id}/commit  {conclusion, conclusion_kind, next_step, revisit_date?} -> {ok, decision_id}
+GET  /decisions            header X-User-Id                          -> this user's ledger
+GET  /stats                                                          -> guard counters (for the deck)
+GET  /healthz, GET /
+"""
 from __future__ import annotations
 
-import uuid
+import os
 
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from fastapi import FastAPI, Header, HTTPException
+from fastapi.responses import FileResponse
 
-from app import session as sess
-from app.schemas import Commit, Turn
-from app.store import get_store
+from .logs import log_event
+from .schemas import AnswerIn, CommitIn, StartIn
+from .session import SessionManager
 
-app = FastAPI(title="Funnel", version="0.1.0")
-
-# Allow browser fetch from any origin (tighten for production if desired)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+app = FastAPI(title="Funnel")
+_INDEX = os.path.join(os.path.dirname(__file__), "static", "index.html")
+_manager = None
+_EMPTY_STATS = {"sessions_started": 0, "turns": 0, "guard_checked": 0, "guard_rejected": 0,
+                "guard_soft": 0, "guard_fallbacks": 0, "commits": 0}
 
 
-# ---------------------------------------------------------------------------
-# Request bodies
-# ---------------------------------------------------------------------------
-class DumpBody(BaseModel):
-    dump: str
+def get_manager() -> SessionManager:
+    """Built on first use, so the app starts (and /healthz works) even before a key is set."""
+    global _manager
+    if _manager is None:
+        from .llm import get_llm
+        from .memory_factory import build_memory
+        llm = get_llm()
+        _manager = SessionManager(llm, build_memory(llm))
+    return _manager
 
 
-class AnswerBody(BaseModel):
-    answer: str
+def _run(fn, *args):
+    """Turn internal exceptions into plain-language HTTP errors."""
+    try:
+        return fn(*args)
+    except HTTPException:
+        raise
+    except KeyError:
+        raise HTTPException(404, "This session expired. Please start again.")
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+    except RuntimeError as exc:
+        raise HTTPException(503, str(exc))
+    except Exception as exc:                                  # model / network / Firestore
+        log_event("request_failed", error=type(exc).__name__)
+        raise HTTPException(502, "That didn't work. Please try again in a moment.")
 
 
-# ---------------------------------------------------------------------------
-# Routes
-# ---------------------------------------------------------------------------
-
-@app.post("/session", response_model=dict)
-async def create_session(body: DumpBody):
-    """POST /session  — start a new session with the user's raw dump."""
-    if not body.dump.strip():
-        raise HTTPException(status_code=400, detail="dump cannot be empty")
-    session_id = str(uuid.uuid4())
-    first_turn = sess.start_session(session_id, body.dump)
-    return {"session_id": session_id, "first_turn": first_turn.model_dump()}
+@app.get("/healthz")
+def healthz():
+    return {"ok": True}
 
 
-@app.post("/session/{session_id}/turn", response_model=Turn)
-async def session_turn(session_id: str, body: AnswerBody):
-    """POST /session/{id}/turn  — send the user's answer, get next Turn."""
-    if not body.answer.strip():
-        raise HTTPException(status_code=400, detail="answer cannot be empty")
-    turn = sess.next_turn(session_id, body.answer)
-    return turn
+@app.post("/session")
+def create_session(body: StartIn, x_user_id: str = Header(default="anon")):
+    mgr = _run(get_manager)
+    out = _run(mgr.start, x_user_id, body.dump, body.direct_opt_in)
+    return {"session_id": out["session_id"], "first_turn": out["turn"], "memory": out["memory"]}
 
 
-@app.post("/session/{session_id}/commit", response_model=dict)
-async def session_commit(session_id: str, commit: Commit):
-    """POST /session/{id}/commit  — save the user's conclusion to the ledger."""
-    decision = sess.commit_session(session_id, commit)
-    if not decision:
-        raise HTTPException(status_code=404, detail="session not found")
-    return {"ok": True, "decision_id": decision.id}
+@app.post("/session/{session_id}/turn")
+def session_turn(session_id: str, body: AnswerIn):
+    mgr = _run(get_manager)
+    return _run(mgr.answer, session_id, body.answer)["turn"]
+
+
+@app.post("/session/{session_id}/commit")
+def session_commit(session_id: str, body: CommitIn):
+    mgr = _run(get_manager)
+    revisit = body.revisit_date.isoformat() if body.revisit_date else None
+    res = _run(mgr.commit, session_id, body.conclusion_kind, body.conclusion, body.next_step, revisit)
+    return {"ok": True, "decision_id": res["decision_id"]}
 
 
 @app.get("/decisions")
-async def list_decisions():
-    """GET /decisions  — return the full ledger."""
-    store = get_store()
-    decisions = store.list_decisions()
-    return [d.model_dump(mode="json") for d in decisions]
+def list_decisions(x_user_id: str = Header(default="anon")):
+    mgr = _run(get_manager)
+    return _run(mgr.decisions, x_user_id)
 
 
-# ---------------------------------------------------------------------------
-# Serve static index.html from project root
-# ---------------------------------------------------------------------------
-import os
-from fastapi.responses import FileResponse
+@app.get("/stats")
+def stats():
+    return _manager.stats if _manager else _EMPTY_STATS
+
 
 @app.get("/")
-async def index():
-    path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "index.html")
-    return FileResponse(path)
+def index():
+    return FileResponse(_INDEX)

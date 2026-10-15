@@ -313,6 +313,9 @@
     .stats-bar .val { color: var(--text); font-weight: 600; }
 
     @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+      .link-btn { background: none; border: none; color: var(--muted); text-decoration: underline;
+      cursor: pointer; margin-left: 12px; font: inherit; font-size: .9rem; }
+    .link-btn:hover { color: var(--text); }
   </style>
 </head>
 <body>
@@ -347,7 +350,8 @@
 
     <div class="answer-area">
       <textarea id="answer-input" placeholder="Take your time…" onkeydown="handleAnswerKey(event)"></textarea>
-      <button class="primary-btn" onclick="sendAnswer()">Send →</button>
+      <button class="primary-btn" id="send-btn" onclick="sendAnswer()">Send →</button>
+      <button class="link-btn" onclick="goToCommit()">I know where I've landed</button>
     </div>
 
     <div id="guard-badge-wrap" style="margin-top:8px;display:none;">
@@ -382,7 +386,7 @@
     </div>
 
     <div class="commit-section">
-      <label>Revisit date (optional)</label>
+      <label for="revisit-input">Revisit date (optional)</label>
       <input type="date" id="revisit-input" />
     </div>
 
@@ -414,223 +418,256 @@
 
 <script>
   const API = '';  // same origin
-  let sessionId = null;
-  let turnCount = 0;
-  let currentKind = 'decided';
-  let echoedDecisions = [];
+
+  // ---- Who is this? A random id kept in this browser. ?user=demo-ravi loads the seeded demo. ----
+  function getUserId() {
+    const fromUrl = new URLSearchParams(location.search).get('user');
+    if (fromUrl) return fromUrl;
+    try {
+      let id = localStorage.getItem('funnel_user_id');
+      if (!id) {
+        id = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2));
+        localStorage.setItem('funnel_user_id', id);
+      }
+      return id;
+    } catch (_) { return 'anon-' + Date.now(); }
+  }
+  const USER_ID = getUserId();
+  function directOptIn() { try { return localStorage.getItem('funnel_direct') === '1'; } catch (_) { return false; } }
+
+  let sessionId = null, turnCount = 0, currentKind = 'decided', hasMemory = false, busy = false;
+
+  // ---- Small helpers (user text is only ever set with textContent: never parsed as HTML) ----
+  function el(tag, cls, text) {
+    const n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text !== undefined && text !== null) n.textContent = text;
+    return n;
+  }
+  function truncate(str, n) { str = str || ''; return str.length > n ? str.slice(0, n) + '…' : str; }
+  function formatDate(iso) {
+    const d = new Date(iso);
+    return isNaN(d) ? '' : d.toLocaleDateString('en-GB', {day: 'numeric', month: 'short', year: 'numeric'});
+  }
+  function showError(msg) {
+    let t = document.getElementById('toast');
+    if (!t) {
+      t = el('div'); t.id = 'toast'; t.setAttribute('role', 'alert');
+      t.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:56px;max-width:90vw;' +
+        'background:#2b2a28;color:#fff;padding:10px 16px;border-radius:10px;font-size:.9rem;z-index:100;';
+      document.body.appendChild(t);
+    }
+    t.textContent = msg; t.style.display = 'block';
+    clearTimeout(showError._t); showError._t = setTimeout(() => { t.style.display = 'none'; }, 5000);
+  }
+  async function api(path, opts = {}) {
+    const res = await fetch(API + path, {
+      ...opts,
+      headers: {'Content-Type': 'application/json', 'X-User-Id': USER_ID, ...(opts.headers || {})}
+    });
+    let data = null;
+    try { data = await res.json(); } catch (_) {}
+    if (!res.ok) {
+      const err = new Error((data && typeof data.detail === 'string') ? data.detail : 'Something went wrong. Please try again.');
+      err.status = res.status; throw err;
+    }
+    return data;
+  }
 
   // ---- State transitions ----
   function showState(id) {
     document.querySelectorAll('.state').forEach(s => s.classList.remove('active'));
     document.getElementById(id).classList.add('active');
   }
+  function resetToDump() {
+    sessionId = null; turnCount = 0; hasMemory = false;
+    document.getElementById('dump-input').value = '';
+    const b = document.getElementById('dump-btn'); b.disabled = false; b.textContent = 'Start →';
+    document.getElementById('memory-card').style.display = 'none';
+    document.getElementById('timeline-section').style.display = 'none';
+    document.getElementById('answer-input').style.display = '';
+    const send = document.getElementById('send-btn'); send.textContent = 'Send →'; send.onclick = sendAnswer;
+    showState('state-dump');
+  }
 
   // ---- Start session ----
   async function startSession() {
     const dump = document.getElementById('dump-input').value.trim();
-    if (!dump) return;
+    if (!dump || busy) return;
     const btn = document.getElementById('dump-btn');
-    btn.disabled = true;
-    btn.textContent = 'Starting…';
-
+    busy = true; btn.disabled = true; btn.textContent = 'Reading…';
     try {
-      const res = await fetch(`${API}/session`, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({dump})
-      });
-      const data = await res.json();
-      sessionId = data.session_id;
-      const turn = data.first_turn;
-
+      const data = await api('/session', {method: 'POST', body: JSON.stringify({dump, direct_opt_in: directOptIn()})});
+      sessionId = data.session_id; turnCount = 0;
       showState('state-discover');
-      displayTurn(turn);
-      turnCount = 0;
+      renderMemory(data.memory);
+      displayTurn(data.first_turn);
+      document.getElementById('answer-input').focus();
       updateStats();
     } catch (e) {
-      btn.disabled = false;
-      btn.textContent = 'Start →';
-      alert('Error: ' + e.message);
-    }
+      btn.disabled = false; btn.textContent = 'Start →';
+      showError(e.message);
+    } finally { busy = false; }
   }
 
   // ---- Display a turn ----
   function displayTurn(turn) {
-    const bubble = document.getElementById('question-bubble');
-    bubble.textContent = turn.text;
-
-    // Show guard badge for question turns
-    const badgeWrap = document.getElementById('guard-badge-wrap');
-    badgeWrap.style.display = (turn.type === 'question') ? 'block' : 'none';
-
-    // If echoed decisions, stash for timeline
-    if (turn.decision_ids && turn.decision_ids.length > 0) {
-      echoedDecisions = turn.decision_ids;
-      showMemoryCard(turn.decision_ids);
-    }
-
-    // If offer_commit, swap button
+    document.getElementById('question-bubble').textContent = turn.text;
+    document.getElementById('guard-badge-wrap').style.display = (turn.type === 'question') ? 'block' : 'none';
     if (turn.type === 'offer_commit') {
-      document.querySelector('#state-discover .primary-btn').textContent = 'Write my conclusion →';
-      document.querySelector('#state-discover .primary-btn').onclick = goToCommit;
+      const send = document.getElementById('send-btn');
+      send.textContent = 'Write my conclusion →'; send.onclick = goToCommit;
       document.getElementById('answer-input').style.display = 'none';
     }
   }
 
-  async function showMemoryCard(ids) {
-    // Fetch ledger and filter to echoed IDs
-    try {
-      const res = await fetch(`${API}/decisions`);
-      const decisions = await res.json();
-      const echoed = decisions.filter(d => ids.includes(d.id));
-      if (!echoed.length) return;
+  // ---- Memory card: built from the server's counted facts ----
+  function renderMemory(p) {
+    const card = document.getElementById('memory-card');
+    const text = document.getElementById('memory-text');
+    card.querySelectorAll('.memory-extra').forEach(n => n.remove());
+    const loop = p && p.times_raised > 1, echoes = (p && p.echoes) || [];
+    hasMemory = !!(loop || echoes.length);
+    if (!hasMemory) { card.style.display = 'none'; return; }
 
-      const card = document.getElementById('memory-card');
-      const text = document.getElementById('memory-text');
-      const first = echoed[0];
-      const daysAgo = daysSince(first.created_at);
-      let msg = `${daysAgo} day${daysAgo !== 1 ? 's' : ''} ago you were deciding: "${truncate(first.dump, 100)}"`;
-      if (first.conclusion) msg += ` You ${first.conclusion_kind || 'concluded'}: "${truncate(first.conclusion, 80)}"`;
-      text.textContent = msg;
-      card.style.display = 'block';
-      renderTimeline(echoed);
-    } catch (_) {}
+    const lines = [];
+    if (loop) {
+      lines.push('This decision has come up ' + p.times_raised + ' times.');
+      if (p.previous) {
+        const kind = {decided: 'decided', need_more_info: 'needed more information', parked: 'parked it'}[p.previous.kind] || p.previous.kind;
+        lines.push('Last time you ' + kind + (p.previous.conclusion ? ': \u201c' + truncate(p.previous.conclusion, 100) + '\u201d' : '') + '.');
+        if (p.revisit_overdue) lines.push('The revisit date you set has passed.');
+      }
+    }
+    echoes.forEach(e => {
+      lines.push('A different decision with a similar worry: \u201c' + truncate(e.title, 80) + '\u201d (' + e.days_ago + ' days ago).' +
+                 (e.conclusion ? ' You wrote: \u201c' + truncate(e.conclusion, 80) + '\u201d' : ''));
+    });
+    text.style.whiteSpace = 'pre-line';
+    text.textContent = lines.join('\n');
+    if (p.seeded) {
+      const tag = el('span', 'seeded-label', 'seeded demo');
+      tag.classList.add('memory-extra'); card.appendChild(tag);
+    }
+    if (loop && p.times_raised >= 3) {
+      const lab = el('label', 'memory-extra'); lab.style.cssText = 'display:block;margin-top:10px;font-size:.85rem;';
+      const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = directOptIn();
+      cb.addEventListener('change', () => { try { localStorage.setItem('funnel_direct', cb.checked ? '1' : '0'); } catch (_) {} });
+      lab.append(cb, ' Be more direct when a decision keeps coming back (applies next session)');
+      card.appendChild(lab);
+    }
+    card.style.display = 'block';
+    renderTimeline(p);
   }
 
   // ---- Send answer ----
   async function sendAnswer() {
-    const answer = document.getElementById('answer-input').value.trim();
-    if (!answer || !sessionId) return;
-
+    const input = document.getElementById('answer-input');
+    const answer = input.value.trim();
+    if (!answer || !sessionId || busy) return;
+    busy = true;
     const bubble = document.getElementById('question-bubble');
-    bubble.innerHTML = '<span class="loading-dots">Thinking…</span>';
-    document.getElementById('answer-input').value = '';
+    const previous = bubble.textContent;
+    bubble.replaceChildren(el('span', 'loading-dots', 'Thinking…'));
+    input.value = '';
     document.getElementById('guard-badge-wrap').style.display = 'none';
-    turnCount++;
-    document.getElementById('stat-turns').textContent = turnCount;
-
     try {
-      const res = await fetch(`${API}/session/${sessionId}/turn`, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({answer})
-      });
-      const turn = await res.json();
-      displayTurn(turn);
+      const turn = await api('/session/' + sessionId + '/turn', {method: 'POST', body: JSON.stringify({answer})});
+      turnCount++; document.getElementById('stat-turns').textContent = turnCount;
+      displayTurn(turn); input.focus(); updateStats();
     } catch (e) {
-      bubble.textContent = 'Something went wrong. Try again.';
-    }
+      bubble.textContent = previous; input.value = answer;
+      showError(e.message);
+      if (e.status === 404) resetToDump();
+    } finally { busy = false; }
   }
-
-  function handleAnswerKey(e) {
-    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) sendAnswer();
-  }
+  function handleAnswerKey(e) { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) sendAnswer(); }
 
   // ---- Commit ----
   function goToCommit() {
     showState('state-commit');
-    if (echoedDecisions.length) {
-      // Timeline already rendered, just show it
-      document.getElementById('timeline-section').style.display = 'block';
-    }
+    if (hasMemory) document.getElementById('timeline-section').style.display = 'block';
   }
-
   function selectKind(btn) {
     document.querySelectorAll('.kind-btn').forEach(b => b.classList.remove('selected'));
-    btn.classList.add('selected');
-    currentKind = btn.dataset.kind;
-    const revisitSection = document.querySelector('.commit-section:has(#revisit-input)');
-    // Show revisit date only for parked
-    if (revisitSection) revisitSection.style.opacity = currentKind === 'parked' ? '1' : '0.5';
+    btn.classList.add('selected'); currentKind = btn.dataset.kind;
+    const label = document.querySelector('label[for="revisit-input"], .commit-section:has(#revisit-input) label');
+    if (label) label.textContent = currentKind === 'parked' ? 'Revisit date (required for parked)' : 'Revisit date (optional)';
   }
-
   async function saveCommit() {
+    if (busy) return;
     const conclusion = document.getElementById('conclusion-input').value.trim();
     const next_step = document.getElementById('nextstep-input').value.trim();
     const revisit_date = document.getElementById('revisit-input').value || null;
-    if (!conclusion || !next_step || !sessionId) { alert('Please fill in your conclusion and next step.'); return; }
-
-    const payload = { conclusion, conclusion_kind: currentKind, next_step, revisit_date };
+    if (!conclusion) return showError('Write your conclusion in your own words first.');
+    if (currentKind === 'parked' && !revisit_date) return showError('Pick a revisit date for a parked decision.');
+    busy = true;
     try {
-      await fetch(`${API}/session/${sessionId}/commit`, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify(payload)
-      });
-      alert('Saved to your ledger. ✓');
-      updateStats();
-    } catch (e) { alert('Save failed: ' + e.message); }
+      await api('/session/' + sessionId + '/commit', {method: 'POST',
+        body: JSON.stringify({conclusion, conclusion_kind: currentKind, next_step, revisit_date})});
+      showError('Saved to your ledger \u2713');
+      ['conclusion-input', 'nextstep-input', 'revisit-input'].forEach(id => { document.getElementById(id).value = ''; });
+      updateStats(); resetToDump();
+    } catch (e) { showError(e.message); if (e.status === 404) resetToDump(); }
+    finally { busy = false; }
   }
 
-  // ---- Timeline ----
-  function renderTimeline(echoed) {
-    const container = document.getElementById('timeline-items');
-    container.innerHTML = '';
-    echoed.slice(0, 3).forEach((d, i) => {
-      const el = document.createElement('div');
-      el.className = 'timeline-item';
-      const isLast = i === echoed.length - 1;
-      el.innerHTML = `
-        ${!isLast ? '<div class="timeline-connector"></div>' : ''}
-        <div class="timeline-dot${d.conclusion ? '' : ' dim'}"></div>
-        <div class="timeline-content">
-          <div class="timeline-date">${formatDate(d.created_at)}${d.seeded ? '<span class="seeded-label">seeded demo</span>' : ''}</div>
-          <div class="timeline-decision">${truncate(d.dump, 120)}<span class="echo-badge">echo</span></div>
-          ${d.conclusion ? `<div class="timeline-outcome">→ ${d.conclusion}</div>` : ''}
-        </div>`;
-      container.appendChild(el);
+  // ---- Timeline (dates the decision came up + echoes) ----
+  function renderTimeline(p) {
+    const box = document.getElementById('timeline-items'); box.replaceChildren();
+    const items = [];
+    (p.timeline || []).forEach(m => items.push({date: m.date, text: 'You raised this decision', outcome: null, echo: false}));
+    (p.echoes || []).forEach(e => items.push({date: null, text: e.title, outcome: e.conclusion, echo: true, seeded: e.seeded, ago: e.days_ago}));
+    items.slice(0, 4).forEach((it, i, arr) => {
+      const row = el('div', 'timeline-item');
+      if (i < arr.length - 1) row.appendChild(el('div', 'timeline-connector'));
+      row.appendChild(el('div', 'timeline-dot' + (it.echo && !it.outcome ? ' dim' : '')));
+      const body = el('div', 'timeline-content');
+      const date = el('div', 'timeline-date', it.date ? formatDate(it.date) : it.ago + ' days ago');
+      if (it.seeded) date.appendChild(el('span', 'seeded-label', 'seeded demo'));
+      const what = el('div', 'timeline-decision', truncate(it.text, 120));
+      if (it.echo) what.appendChild(el('span', 'echo-badge', 'echo'));
+      body.append(date, what);
+      if (it.outcome) body.appendChild(el('div', 'timeline-outcome', '\u2192 ' + it.outcome));
+      row.append(el('span'), body); box.appendChild(row);
     });
   }
 
-  // ---- Ledger ----
+  // ---- Ledger overlay ----
   async function openLedger() {
     document.getElementById('ledger-overlay').classList.add('open');
     const list = document.getElementById('ledger-list');
-    list.innerHTML = '<p style="color:var(--muted)">Loading…</p>';
+    list.replaceChildren(el('p', '', 'Loading…'));
     try {
-      const res = await fetch(`${API}/decisions`);
-      const decisions = await res.json();
-      updateStats(decisions);
-      if (!decisions.length) { list.innerHTML = '<p style="color:var(--muted)">No decisions yet.</p>'; return; }
-      list.innerHTML = decisions.map(d => `
-        <div class="ledger-item">
-          <div class="dump-preview">${truncate(d.dump, 140)}${d.seeded ? '<span class="seeded-label">seeded demo</span>' : ''}</div>
-          <div class="meta">
-            ${formatDate(d.created_at)} &nbsp;·&nbsp;
-            ${d.conclusion ? `Concluded: <em>${truncate(d.conclusion, 60)}</em>` : 'In progress'}
-            ${d.revisit_date ? ` &nbsp;·&nbsp; Revisit ${d.revisit_date}` : ''}
-          </div>
-        </div>`).join('');
-    } catch (e) { list.innerHTML = `<p style="color:var(--red)">Error: ${e.message}</p>`; }
+      const decisions = await api('/decisions');
+      document.getElementById('stat-ledger').textContent = decisions.length;
+      if (!decisions.length) { list.replaceChildren(el('p', '', 'No decisions yet.')); return; }
+      list.replaceChildren(...decisions.map(d => {
+        const item = el('div', 'ledger-item');
+        const prev = el('div', 'dump-preview', truncate(d.dump, 140));
+        if (d.seeded) prev.appendChild(el('span', 'seeded-label', 'seeded demo'));
+        const meta = el('div', 'meta');
+        const kind = {decided: 'Decided', need_more_info: 'Needed more info', parked: 'Parked'}[d.conclusion_kind];
+        meta.append(formatDate(d.created_at) + ' · ');
+        if (d.conclusion) { meta.append((kind || 'Concluded') + ': '); meta.appendChild(el('em', '', truncate(d.conclusion, 60))); }
+        else meta.append('In progress');
+        if (d.times_raised > 1) meta.append(' · raised ' + d.times_raised + ' times');
+        if (d.revisit_date) meta.append(' · Revisit ' + d.revisit_date);
+        item.append(prev, meta); return item;
+      }));
+    } catch (e) { list.replaceChildren(el('p', '', e.message)); }
   }
-
   function closeLedger() { document.getElementById('ledger-overlay').classList.remove('open'); }
   function closeLedgerOutside(e) { if (e.target === document.getElementById('ledger-overlay')) closeLedger(); }
 
-  // ---- Stats ----
-  async function updateStats(decisions = null) {
+  // ---- Stats bar: real numbers from the server ----
+  async function updateStats() {
     try {
-      if (!decisions) {
-        const res = await fetch(`${API}/decisions`);
-        decisions = await res.json();
-      }
-      document.getElementById('stat-ledger').textContent = decisions.length;
+      const [s, d] = await Promise.all([api('/stats'), api('/decisions')]);
+      document.getElementById('stat-rejections').textContent = s.guard_rejected + ' of ' + s.guard_checked + ' replies';
+      document.getElementById('stat-ledger').textContent = d.length;
     } catch (_) {}
-    // Guard rejection count is logged server-side; show placeholder
-    document.getElementById('stat-rejections').textContent = '(see server log)';
   }
-
-  // ---- Helpers ----
-  function truncate(str, n) { return str.length > n ? str.slice(0, n) + '…' : str; }
-  function daysSince(iso) {
-    const d = new Date(iso);
-    return Math.floor((Date.now() - d.getTime()) / 86400000);
-  }
-  function formatDate(iso) {
-    return new Date(iso).toLocaleDateString('en-GB', {day: 'numeric', month: 'short', year: 'numeric'});
-  }
-
-  // Init
   updateStats();
 </script>
 </body>

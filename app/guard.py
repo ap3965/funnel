@@ -1,113 +1,112 @@
+"""The output guard. Every AI reply passes through check() before the user sees it.
+
+Funnel's AI may only ASK or OBSERVE. It may not advise, plan, or list tasks.
+This is enforced here, in code, not just in the prompt.
+
+Hard problems -> the reply is rejected and regenerated.
+Soft problems -> the reply is allowed but logged (they are the early warning signs).
 """
-guard.py — deterministic check that the AI only asks questions, never advises.
-
-Hard reject patterns → retry once with stricter instruction → fall back to safe question.
-Soft flag patterns → log only.
-
-KNOWN SAFE STRINGS (must-pass, from Section 8 of spec):
-  "Does the dread make it hard to start, or impossible to focus on
-   anything else until you know?"
-"""
-
 from __future__ import annotations
 
-import logging
 import re
-from pathlib import Path
+from dataclasses import dataclass, field
+from typing import Optional
 
-# ---------------------------------------------------------------------------
-# Logging
-# ---------------------------------------------------------------------------
-_log_path = Path("eval/rejections.log")
-_log_path.parent.mkdir(parents=True, exist_ok=True)
 
-logger = logging.getLogger("funnel.guard")
-_file_handler = logging.FileHandler(_log_path)
-_file_handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
-logger.addHandler(_file_handler)
-logger.setLevel(logging.DEBUG)
+@dataclass
+class Verdict:
+    ok: bool
+    hard: list = field(default_factory=list)
+    soft: list = field(default_factory=list)
 
-# ---------------------------------------------------------------------------
-# Hard reject patterns (any match → reject)
-# ---------------------------------------------------------------------------
-_HARD_REJECT: list[re.Pattern] = [
-    # Numbered / bulleted lists
-    re.compile(r"^\s*(\d+[\.\)]\s|\*\s|-\s)", re.MULTILINE),
-    # Imperative advice verbs (whole word, case-insensitive)
-    re.compile(r"\b(you should|try to|consider|i recommend|i suggest"
-               r"|you could|one option is|a good idea would be"
-               r"|why not|go ahead and|make sure you)\b", re.IGNORECASE),
-    # Closure / resolution phrasing — NARROW: do NOT match "anything else"
-    # Bad pattern from earlier draft that broke the must-pass case:
-    #   re.compile(r"anything else")  <-- removed
-    re.compile(
-        r"\b(in conclusion|in summary|so the answer is|the best (choice|option|path|move) is"
-        r"|you('ve| have) decided|i('d| would) (recommend|advise|suggest)"
-        r"|sounds like you('ve| have) made up your mind)\b",
-        re.IGNORECASE,
-    ),
+
+_LIST_LINE = re.compile(r"^\s*(\d+[.)]|[-*\u2022])\s+", re.M)
+
+# Advice phrased as a statement. Checked on non-question sentences only, so a
+# question like "Why do you think you should rewrite it?" is not rejected.
+_ADVICE = [
+    re.compile(r"\byou (should|ought to|need to|must|have to|had better|could try|might want to|may want to)\b", re.I),
+    re.compile(r"\b(i|we) (recommend|suggest|advise|propose)\b", re.I),
+    re.compile(r"\b(my|the) (advice|recommendation|suggestion)\b", re.I),
+    re.compile(r"\bit('s| is) (best|better|wise|smart|important) (to|that you)\b", re.I),
+    re.compile(r"\b(you're|you are) better off\b", re.I),
+    re.compile(r"\bthe (best|right|smart|safest) (option|choice|move|path|call)\b", re.I),
 ]
+_COMMAND_START = re.compile(
+    r"^\s*(try|consider|start|begin|make sure|remember to|focus on|take|write down|set up|"
+    r"break (it|this) down|think about|decide|pick|choose|talk to|ask yourself|go with|just)\b", re.I)
+# Advice disguised as a question ("Why not try...?"). Checked on ALL text, questions included.
+_WHY_NOT = re.compile(
+    r"\bwhy not (try|just|go|take|do|start|ship|hire|ask|talk|make|pick|choose|use|build|write|wait|consider|keep|stay|rewrite|run)\b", re.I)
+# The AI declaring a verdict or closing the matter for the user (statements only).
+_VERDICT = re.compile(
+    r"\b(in conclusion|in summary|so the answer is|you('ve| have) (decided|made up your mind)|sounds like you('ve| have) (decided|made up your mind))\b", re.I)
+_PLAN_WORDS = re.compile(
+    r"\b(next steps?|action (plan|items?)|to-?do( list)?|step \d|here'?s (a|the|your|my) (plan|list|approach|suggestion))\b", re.I)
+_CLOSURE = re.compile(
+    r"^\s*(is there |was there )?anything else"
+    r"( you('d| would) (like|want) to (add|share|say|cover|talk about))?\s*\??\s*$", re.I)
+_LEADING = re.compile(
+    r"\b(have you (considered|thought about|tried)|why (don'?t|not) you|what if you (just )?(tried|took|did|made|went)|"
+    r"wouldn'?t it be (better|easier|smarter|wiser))\b", re.I)
 
-# ---------------------------------------------------------------------------
-# Soft flag patterns (log but do not reject)
-# ---------------------------------------------------------------------------
-_SOFT_FLAG: list[re.Pattern] = [
-    # Forced-choice framing
-    re.compile(r"\bwould you (rather|prefer)\b", re.IGNORECASE),
-    # Leading questions
-    re.compile(r"\bisn't it (true|clear|obvious)\b", re.IGNORECASE),
-]
-
-# Safe fallback question returned when retry also fails
-SAFE_FALLBACK = "What feels most unresolved about this for you right now?"
-
-# Must-pass strings used in tests (kept here for reference)
-MUST_PASS_EXAMPLES = [
-    "Does the dread make it hard to start, or impossible to focus on anything else until you know?",
-]
-
-
-def check(text: str) -> tuple[bool, str | None]:
-    """
-    Returns (is_clean, reason_or_None).
-    is_clean=True means the text passed all hard-reject rules.
-    """
-    for pattern in _HARD_REJECT:
-        if pattern.search(text):
-            reason = f"hard_reject pattern={pattern.pattern!r}"
-            logger.warning("REJECT | %s | text=%r", reason, text[:120])
-            return False, reason
-
-    for pattern in _SOFT_FLAG:
-        if pattern.search(text):
-            logger.info("SOFT_FLAG | pattern=%r | text=%r", pattern.pattern, text[:120])
-
-    return True, None
+MAX_WORDS_HARD = 120
+MAX_WORDS_SOFT = 60
 
 
-def guard_or_fallback(
-    text: str,
-    retry_fn: "Callable[[], str] | None" = None,
-) -> str:
-    """
-    If text passes → return it.
-    If not → call retry_fn once (if provided) with a stricter system instruction.
-    If retry also fails → return SAFE_FALLBACK.
-    Logs all rejections.
-    """
-    clean, reason = check(text)
-    if clean:
-        return text
+def _sentences(text: str) -> list:
+    return [s for s in re.split(r"(?<=[.!?])\s+", text.strip()) if s]
 
-    logger.warning("FIRST_REJECT | reason=%s", reason)
 
-    if retry_fn:
-        retry_text = retry_fn()
-        clean2, reason2 = check(retry_text)
-        if clean2:
-            logger.info("RETRY_OK | text=%r", retry_text[:120])
-            return retry_text
-        logger.warning("RETRY_REJECT | reason=%s | falling back", reason2)
+def check(text: Optional[str], kind: Optional[str] = None) -> Verdict:
+    """kind: 'question' | 'observation' | None (skip the type-specific check)."""
+    hard, soft = [], []
+    text = (text or "").strip()
+    if not text:
+        return Verdict(False, ["empty"], [])
 
-    logger.warning("FALLBACK_USED")
-    return SAFE_FALLBACK
+    if _LIST_LINE.search(text):
+        hard.append("list: numbered or bulleted lines")
+    if _PLAN_WORDS.search(text):
+        hard.append("plan: plan or task-list wording")
+    m = _WHY_NOT.search(text)
+    if m:
+        hard.append(f"advice: '{m.group(0).lower()}' (advice phrased as a question)")
+    if _CLOSURE.match(text):
+        hard.append("closure: wrap-up line, not a question about the decision")
+
+    for sent in _sentences(text):
+        if sent.endswith("?"):
+            continue                                  # questions may quote advice-like words
+        for pat in _ADVICE:
+            m = pat.search(sent)
+            if m:
+                hard.append(f"advice: '{m.group(0).lower()}'")
+        m = _VERDICT.search(sent)
+        if m:
+            hard.append(f"verdict: '{m.group(0).lower()}'")
+        m = _COMMAND_START.match(sent)
+        if m:
+            hard.append(f"command: starts with '{m.group(1).lower()}'")
+
+    words = len(text.split())
+    if words > MAX_WORDS_HARD:
+        hard.append(f"length: {words} words")
+    elif words > MAX_WORDS_SOFT:
+        soft.append(f"length: {words} words")
+
+    q_marks = text.count("?")
+    if q_marks > 2:
+        hard.append(f"too many questions: {q_marks}")
+    elif q_marks == 2:
+        soft.append("two questions in one reply")
+    if kind == "question" and q_marks == 0:
+        hard.append("type is 'question' but there is no question mark")
+
+    m = _LEADING.search(text)
+    if m:
+        soft.append(f"leading: '{m.group(0).lower()}' (may smuggle in an option)")
+
+    # de-duplicate, keep order
+    hard = list(dict.fromkeys(hard))
+    return Verdict(ok=not hard, hard=hard, soft=soft)

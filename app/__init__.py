@@ -1,1 +1,0 @@
-# Funnel app package
