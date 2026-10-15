@@ -1,0 +1,52 @@
+[
+  {
+    "id": "dump-01",
+    "dump": "I've been thinking for weeks about whether to rewrite our backend in Go or keep shipping features on the Python monolith. The monolith is slow and painful but at least I know it. Go would be faster but it's a 3-month rewrite and we have no Go experience. I'm scared of choosing wrong.",
+    "note": "Classic rewrite-or-ship decision"
+  },
+  {
+    "id": "dump-02",
+    "dump": "Should I quit my job and go freelance? I have two clients lined up but no safety net. My current job is stable but soul-crushing. I keep going back and forth every weekend.",
+    "note": "Job vs. freelance"
+  },
+  {
+    "id": "dump-03",
+    "dump": "My co-founder and I disagree about pricing. She wants to charge enterprise prices from day one. I think we should start free and prove value. We've been avoiding the conversation for a month.",
+    "note": "Co-founder pricing disagreement"
+  },
+  {
+    "id": "dump-04",
+    "dump": "I need to decide whether to raise a seed round now or wait until we hit $10k MRR. Investors are interested but we'd dilute early. If we wait, we might run out of runway in 4 months.",
+    "note": "Fundraising timing"
+  },
+  {
+    "id": "dump-05",
+    "dump": "My team keeps asking me to pick a project management tool — Notion, Linear, or Jira. Every time I try to decide I get overwhelmed by the options and just postpone it. It's been two months.",
+    "note": "Low-stakes but chronically avoided decision"
+  },
+  {
+    "id": "dump-06",
+    "dump": "Do I hire a senior engineer now (expensive, might not survive our next round) or keep relying on contractors (flexible but slow and disconnected)? My instinct says hire but my spreadsheet says wait.",
+    "note": "Hire vs. contract"
+  },
+  {
+    "id": "dump-07",
+    "dump": "I've been offered a role at a big tech company — great salary, interesting work, but I'd have to shut down my startup which has real users. I don't know if I'm tired or if I'm just afraid.",
+    "note": "Startup exit vs. big tech"
+  },
+  {
+    "id": "dump-08",
+    "dump": "My co-founder wants to pivot to B2B. I built this for consumers and it still feels right. But we have zero consumer revenue after 8 months. I don't know if I'm being principled or deluded.",
+    "note": "Pivot decision"
+  },
+  {
+    "id": "dump-09",
+    "dump": "I can't decide whether to move the team to fully remote or require two days in office. Half the team hates commuting. The other half says async kills culture. I keep delaying the announcement.",
+    "note": "Remote work policy"
+  },
+  {
+    "id": "dump-10",
+    "dump": "We have a partnership offer from a larger company. It would give us distribution but they'd have exclusivity for 18 months. I'm worried about locking us in. But without it we might not survive the year.",
+    "note": "Partnership with exclusivity clause"
+  }
+]

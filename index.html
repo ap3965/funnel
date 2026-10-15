@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Funnel</title>
+  <style>
+    /* ---- Reset & Base ---- */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f0f11;
+      --surface: #1a1a1f;
+      --border: #2a2a32;
+      --text: #e8e8ed;
+      --muted: #888899;
+      --accent: #7c6ff7;
+      --accent-dim: #3d3860;
+      --green: #4ecb71;
+      --red: #e05252;
+      --radius: 12px;
+      --font: 'Inter', system-ui, sans-serif;
+    }
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* ---- Layout ---- */
+    header {
+      width: 100%;
+      max-width: 680px;
+      padding: 32px 24px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .logo { font-size: 1.25rem; font-weight: 700; letter-spacing: -0.5px; }
+    .logo span { color: var(--accent); }
+    .ledger-btn {
+      font-size: 0.8rem;
+      color: var(--muted);
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 14px;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+    .ledger-btn:hover { border-color: var(--accent); color: var(--text); }
+
+    main {
+      width: 100%;
+      max-width: 680px;
+      padding: 40px 24px 80px;
+      flex: 1;
+    }
+
+    /* ---- States ---- */
+    .state { display: none; }
+    .state.active { display: block; }
+
+    /* ---- Dump state ---- */
+    #state-dump { animation: fadeIn 0.3s; }
+    .tagline {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-bottom: 28px;
+    }
+    h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      line-height: 1.2;
+      margin-bottom: 10px;
+    }
+    textarea {
+      width: 100%;
+      min-height: 180px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 1rem;
+      line-height: 1.6;
+      padding: 16px;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    textarea:focus { border-color: var(--accent); }
+    textarea::placeholder { color: var(--muted); }
+    .primary-btn {
+      margin-top: 16px;
+      width: 100%;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      padding: 14px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .primary-btn:hover { opacity: 0.88; }
+    .primary-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* ---- Discover state ---- */
+    #state-discover { animation: fadeIn 0.3s; }
+    .memory-card {
+      background: var(--surface);
+      border: 1px solid var(--accent-dim);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      margin-bottom: 28px;
+      font-size: 0.88rem;
+      color: var(--muted);
+    }
+    .memory-card h3 {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      margin-bottom: 8px;
+    }
+    .memory-card p { line-height: 1.6; }
+    .question-bubble {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      font-size: 1.1rem;
+      line-height: 1.65;
+      margin-bottom: 24px;
+      min-height: 72px;
+    }
+    .loading-dots { color: var(--muted); font-style: italic; }
+    .answer-area { display: flex; flex-direction: column; gap: 12px; }
+    .answer-area textarea { min-height: 100px; }
+    .guard-badge {
+      font-size: 0.75rem;
+      color: var(--green);
+      border: 1px solid #2d5c3a;
+      border-radius: 6px;
+      padding: 3px 10px;
+      display: inline-block;
+      margin-top: 4px;
+    }
+
+    /* ---- Commit state ---- */
+    #state-commit { animation: fadeIn 0.3s; }
+    .commit-section { margin-bottom: 28px; }
+    .commit-section label {
+      display: block;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .commit-section textarea { min-height: 80px; }
+    .kind-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+    .kind-btn {
+      flex: 1;
+      min-width: 120px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--muted);
+      padding: 10px;
+      font-size: 0.88rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+    }
+    .kind-btn.selected {
+      border-color: var(--accent);
+      color: var(--text);
+      background: var(--accent-dim);
+    }
+    input[type="date"] {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 0.95rem;
+      padding: 10px 14px;
+      width: 100%;
+      outline: none;
+    }
+    input[type="date"]:focus { border-color: var(--accent); }
+
+    /* ---- Timeline ---- */
+    .timeline-section {
+      margin-top: 40px;
+      padding-top: 32px;
+      border-top: 1px solid var(--border);
+    }
+    .timeline-section h2 {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 20px;
+    }
+    .timeline-item {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 20px;
+      position: relative;
+    }
+    .timeline-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--accent);
+      margin-top: 6px;
+      flex-shrink: 0;
+    }
+    .timeline-dot.dim { background: var(--border); }
+    .timeline-connector {
+      position: absolute;
+      left: 4px;
+      top: 16px;
+      bottom: -14px;
+      width: 2px;
+      background: var(--border);
+    }
+    .timeline-content { flex: 1; }
+    .timeline-date { font-size: 0.75rem; color: var(--muted); margin-bottom: 4px; }
+    .timeline-decision { font-size: 0.95rem; line-height: 1.5; }
+    .timeline-outcome { font-size: 0.8rem; color: var(--muted); margin-top: 4px; }
+    .echo-badge {
+      display: inline-block;
+      font-size: 0.7rem;
+      background: var(--accent-dim);
+      color: var(--accent);
+      border-radius: 4px;
+      padding: 2px 8px;
+      margin-left: 8px;
+    }
+
+    /* ---- Ledger overlay ---- */
+    .overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 100;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 60px 16px;
+      overflow-y: auto;
+    }
+    .overlay.open { display: flex; }
+    .overlay-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      width: 100%;
+      max-width: 640px;
+      padding: 32px;
+    }
+    .overlay-panel h2 { font-size: 1.2rem; margin-bottom: 24px; }
+    .close-btn {
+      float: right;
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 1.4rem;
+      cursor: pointer;
+      line-height: 1;
+    }
+    .ledger-item {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 14px;
+    }
+    .ledger-item .dump-preview { font-size: 0.95rem; line-height: 1.5; margin-bottom: 8px; }
+    .ledger-item .meta { font-size: 0.78rem; color: var(--muted); }
+    .seeded-label {
+      font-size: 0.7rem;
+      background: #3a2d00;
+      color: #f0c040;
+      border-radius: 4px;
+      padding: 2px 8px;
+      margin-left: 8px;
+    }
+
+    /* ---- Guard stats bar ---- */
+    .stats-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: 8px 24px;
+      display: flex;
+      gap: 24px;
+      justify-content: center;
+      font-size: 0.75rem;
+      color: var(--muted);
+      z-index: 50;
+    }
+    .stats-bar span { white-space: nowrap; }
+    .stats-bar .val { color: var(--text); font-weight: 600; }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">fun<span>nel</span></div>
+  <button class="ledger-btn" onclick="openLedger()">Ledger ↗</button>
+</header>
+
+<main>
+  <!-- STATE 1: DUMP -->
+  <div id="state-dump" class="state active">
+    <p class="tagline">I only ask questions. You decide.</p>
+    <h1>What are you carrying around in your head?</h1>
+    <p style="color:var(--muted);font-size:0.9rem;margin:10px 0 24px;line-height:1.6;">
+      Dump it out — messy, half-formed, contradictory. All of it.
+    </p>
+    <textarea id="dump-input" placeholder="e.g. I've been going back and forth for weeks about whether to rewrite the backend or keep shipping features..."></textarea>
+    <button class="primary-btn" id="dump-btn" onclick="startSession()">Start →</button>
+  </div>
+
+  <!-- STATE 2: DISCOVER -->
+  <div id="state-discover" class="state">
+    <div id="memory-card" class="memory-card" style="display:none;">
+      <h3>💭 What I remembered</h3>
+      <p id="memory-text"></p>
+    </div>
+
+    <div id="question-bubble" class="question-bubble">
+      <span class="loading-dots">Thinking…</span>
+    </div>
+
+    <div class="answer-area">
+      <textarea id="answer-input" placeholder="Take your time…" onkeydown="handleAnswerKey(event)"></textarea>
+      <button class="primary-btn" onclick="sendAnswer()">Send →</button>
+    </div>
+
+    <div id="guard-badge-wrap" style="margin-top:8px;display:none;">
+      <span class="guard-badge">✓ Guard: question only</span>
+    </div>
+  </div>
+
+  <!-- STATE 3: COMMIT -->
+  <div id="state-commit" class="state">
+    <h1 style="margin-bottom:8px;">Where did you land?</h1>
+    <p style="color:var(--muted);font-size:0.9rem;margin-bottom:32px;line-height:1.6;">
+      This is yours. Write it in your own words.
+    </p>
+
+    <div class="commit-section">
+      <label>My conclusion</label>
+      <textarea id="conclusion-input" placeholder="e.g. I'm going to keep shipping for 6 more weeks and revisit."></textarea>
+    </div>
+
+    <div class="commit-section">
+      <label>Kind of conclusion</label>
+      <div class="kind-row">
+        <button class="kind-btn selected" data-kind="decided" onclick="selectKind(this)">Decided ✓</button>
+        <button class="kind-btn" data-kind="need_more_info" onclick="selectKind(this)">Need more info</button>
+        <button class="kind-btn" data-kind="parked" onclick="selectKind(this)">Parked</button>
+      </div>
+    </div>
+
+    <div class="commit-section">
+      <label>My next step</label>
+      <textarea id="nextstep-input" placeholder="One concrete thing I will do next."></textarea>
+    </div>
+
+    <div class="commit-section">
+      <label>Revisit date (optional)</label>
+      <input type="date" id="revisit-input" />
+    </div>
+
+    <button class="primary-btn" onclick="saveCommit()">Save to ledger →</button>
+
+    <!-- Timeline echo -->
+    <div id="timeline-section" class="timeline-section" style="display:none;">
+      <h2>📚 A past decision echoing into this one</h2>
+      <div id="timeline-items"></div>
+    </div>
+  </div>
+</main>
+
+<!-- Ledger overlay -->
+<div class="overlay" id="ledger-overlay" onclick="closeLedgerOutside(event)">
+  <div class="overlay-panel">
+    <button class="close-btn" onclick="closeLedger()">×</button>
+    <h2>Decision Ledger</h2>
+    <div id="ledger-list"><p style="color:var(--muted)">No decisions yet.</p></div>
+  </div>
+</div>
+
+<!-- Stats bar -->
+<div class="stats-bar">
+  <span>Guard rejections: <span class="val" id="stat-rejections">–</span></span>
+  <span>Turns this session: <span class="val" id="stat-turns">0</span></span>
+  <span>Ledger entries: <span class="val" id="stat-ledger">–</span></span>
+</div>
+
+<script>
+  const API = '';  // same origin
+  let sessionId = null;
+  let turnCount = 0;
+  let currentKind = 'decided';
+  let echoedDecisions = [];
+
+  // ---- State transitions ----
+  function showState(id) {
+    document.querySelectorAll('.state').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+  }
+
+  // ---- Start session ----
+  async function startSession() {
+    const dump = document.getElementById('dump-input').value.trim();
+    if (!dump) return;
+    const btn = document.getElementById('dump-btn');
+    btn.disabled = true;
+    btn.textContent = 'Starting…';
+
+    try {
+      const res = await fetch(`${API}/session`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({dump})
+      });
+      const data = await res.json();
+      sessionId = data.session_id;
+      const turn = data.first_turn;
+
+      showState('state-discover');
+      displayTurn(turn);
+      turnCount = 0;
+      updateStats();
+    } catch (e) {
+      btn.disabled = false;
+      btn.textContent = 'Start →';
+      alert('Error: ' + e.message);
+    }
+  }
+
+  // ---- Display a turn ----
+  function displayTurn(turn) {
+    const bubble = document.getElementById('question-bubble');
+    bubble.textContent = turn.text;
+
+    // Show guard badge for question turns
+    const badgeWrap = document.getElementById('guard-badge-wrap');
+    badgeWrap.style.display = (turn.type === 'question') ? 'block' : 'none';
+
+    // If echoed decisions, stash for timeline
+    if (turn.decision_ids && turn.decision_ids.length > 0) {
+      echoedDecisions = turn.decision_ids;
+      showMemoryCard(turn.decision_ids);
+    }
+
+    // If offer_commit, swap button
+    if (turn.type === 'offer_commit') {
+      document.querySelector('#state-discover .primary-btn').textContent = 'Write my conclusion →';
+      document.querySelector('#state-discover .primary-btn').onclick = goToCommit;
+      document.getElementById('answer-input').style.display = 'none';
+    }
+  }
+
+  async function showMemoryCard(ids) {
+    // Fetch ledger and filter to echoed IDs
+    try {
+      const res = await fetch(`${API}/decisions`);
+      const decisions = await res.json();
+      const echoed = decisions.filter(d => ids.includes(d.id));
+      if (!echoed.length) return;
+
+      const card = document.getElementById('memory-card');
+      const text = document.getElementById('memory-text');
+      const first = echoed[0];
+      const daysAgo = daysSince(first.created_at);
+      let msg = `${daysAgo} day${daysAgo !== 1 ? 's' : ''} ago you were deciding: "${truncate(first.dump, 100)}"`;
+      if (first.conclusion) msg += ` You ${first.conclusion_kind || 'concluded'}: "${truncate(first.conclusion, 80)}"`;
+      text.textContent = msg;
+      card.style.display = 'block';
+      renderTimeline(echoed);
+    } catch (_) {}
+  }
+
+  // ---- Send answer ----
+  async function sendAnswer() {
+    const answer = document.getElementById('answer-input').value.trim();
+    if (!answer || !sessionId) return;
+
+    const bubble = document.getElementById('question-bubble');
+    bubble.innerHTML = '<span class="loading-dots">Thinking…</span>';
+    document.getElementById('answer-input').value = '';
+    document.getElementById('guard-badge-wrap').style.display = 'none';
+    turnCount++;
+    document.getElementById('stat-turns').textContent = turnCount;
+
+    try {
+      const res = await fetch(`${API}/session/${sessionId}/turn`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({answer})
+      });
+      const turn = await res.json();
+      displayTurn(turn);
+    } catch (e) {
+      bubble.textContent = 'Something went wrong. Try again.';
+    }
+  }
+
+  function handleAnswerKey(e) {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) sendAnswer();
+  }
+
+  // ---- Commit ----
+  function goToCommit() {
+    showState('state-commit');
+    if (echoedDecisions.length) {
+      // Timeline already rendered, just show it
+      document.getElementById('timeline-section').style.display = 'block';
+    }
+  }
+
+  function selectKind(btn) {
+    document.querySelectorAll('.kind-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    currentKind = btn.dataset.kind;
+    const revisitSection = document.querySelector('.commit-section:has(#revisit-input)');
+    // Show revisit date only for parked
+    if (revisitSection) revisitSection.style.opacity = currentKind === 'parked' ? '1' : '0.5';
+  }
+
+  async function saveCommit() {
+    const conclusion = document.getElementById('conclusion-input').value.trim();
+    const next_step = document.getElementById('nextstep-input').value.trim();
+    const revisit_date = document.getElementById('revisit-input').value || null;
+    if (!conclusion || !next_step || !sessionId) { alert('Please fill in your conclusion and next step.'); return; }
+
+    const payload = { conclusion, conclusion_kind: currentKind, next_step, revisit_date };
+    try {
+      await fetch(`${API}/session/${sessionId}/commit`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(payload)
+      });
+      alert('Saved to your ledger. ✓');
+      updateStats();
+    } catch (e) { alert('Save failed: ' + e.message); }
+  }
+
+  // ---- Timeline ----
+  function renderTimeline(echoed) {
+    const container = document.getElementById('timeline-items');
+    container.innerHTML = '';
+    echoed.slice(0, 3).forEach((d, i) => {
+      const el = document.createElement('div');
+      el.className = 'timeline-item';
+      const isLast = i === echoed.length - 1;
+      el.innerHTML = `
+        ${!isLast ? '<div class="timeline-connector"></div>' : ''}
+        <div class="timeline-dot${d.conclusion ? '' : ' dim'}"></div>
+        <div class="timeline-content">
+          <div class="timeline-date">${formatDate(d.created_at)}${d.seeded ? '<span class="seeded-label">seeded demo</span>' : ''}</div>
+          <div class="timeline-decision">${truncate(d.dump, 120)}<span class="echo-badge">echo</span></div>
+          ${d.conclusion ? `<div class="timeline-outcome">→ ${d.conclusion}</div>` : ''}
+        </div>`;
+      container.appendChild(el);
+    });
+  }
+
+  // ---- Ledger ----
+  async function openLedger() {
+    document.getElementById('ledger-overlay').classList.add('open');
+    const list = document.getElementById('ledger-list');
+    list.innerHTML = '<p style="color:var(--muted)">Loading…</p>';
+    try {
+      const res = await fetch(`${API}/decisions`);
+      const decisions = await res.json();
+      updateStats(decisions);
+      if (!decisions.length) { list.innerHTML = '<p style="color:var(--muted)">No decisions yet.</p>'; return; }
+      list.innerHTML = decisions.map(d => `
+        <div class="ledger-item">
+          <div class="dump-preview">${truncate(d.dump, 140)}${d.seeded ? '<span class="seeded-label">seeded demo</span>' : ''}</div>
+          <div class="meta">
+            ${formatDate(d.created_at)} &nbsp;·&nbsp;
+            ${d.conclusion ? `Concluded: <em>${truncate(d.conclusion, 60)}</em>` : 'In progress'}
+            ${d.revisit_date ? ` &nbsp;·&nbsp; Revisit ${d.revisit_date}` : ''}
+          </div>
+        </div>`).join('');
+    } catch (e) { list.innerHTML = `<p style="color:var(--red)">Error: ${e.message}</p>`; }
+  }
+
+  function closeLedger() { document.getElementById('ledger-overlay').classList.remove('open'); }
+  function closeLedgerOutside(e) { if (e.target === document.getElementById('ledger-overlay')) closeLedger(); }
+
+  // ---- Stats ----
+  async function updateStats(decisions = null) {
+    try {
+      if (!decisions) {
+        const res = await fetch(`${API}/decisions`);
+        decisions = await res.json();
+      }
+      document.getElementById('stat-ledger').textContent = decisions.length;
+    } catch (_) {}
+    // Guard rejection count is logged server-side; show placeholder
+    document.getElementById('stat-rejections').textContent = '(see server log)';
+  }
+
+  // ---- Helpers ----
+  function truncate(str, n) { return str.length > n ? str.slice(0, n) + '…' : str; }
+  function daysSince(iso) {
+    const d = new Date(iso);
+    return Math.floor((Date.now() - d.getTime()) / 86400000);
+  }
+  function formatDate(iso) {
+    return new Date(iso).toLocaleDateString('en-GB', {day: 'numeric', month: 'short', year: 'numeric'});
+  }
+
+  // Init
+  updateStats();
+</script>
+</body>
+</html>
