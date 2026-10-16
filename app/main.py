@@ -49,8 +49,15 @@ def _run(fn, *args):
     except RuntimeError as exc:
         raise HTTPException(503, str(exc))
     except Exception as exc:                                  # model / network / Firestore
-        log_event("request_failed", error=type(exc).__name__)
-        raise HTTPException(502, "That didn't work. Please try again in a moment.")
+        code = getattr(exc, "code", None)                     # HTTP status on Google API errors
+        log_event("request_failed", error=type(exc).__name__, code=code, message=str(exc)[:300])
+        if code == 429:
+            raise HTTPException(503, "Gemini says the usage limit was reached. Wait a minute and try again.")
+        if code == 404:
+            raise HTTPException(503, "That Gemini model is not available for your key. Run: python scripts/check_setup.py")
+        if code in (400, 401, 403):
+            raise HTTPException(503, "Gemini rejected the request (check the API key and model). Run: python scripts/check_setup.py")
+        raise HTTPException(502, "That didn't work. Please try again in a moment. (Details are in the server terminal.)")
 
 
 @app.get("/healthz")

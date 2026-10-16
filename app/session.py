@@ -92,7 +92,15 @@ class SessionManager:
         except Exception as exc:                      # memory down: the session still works
             log_event("memory_unavailable", error=type(exc).__name__)
 
-        turn = self._next_turn(sess)
+        try:
+            turn = self._next_turn(sess)
+        except Exception:
+            if sess.decision_id:                    # do not leave a half-created ledger entry
+                try:
+                    self.memory.discard_session(user_id, sess.decision_id, sess.id)
+                except Exception as exc:
+                    log_event("discard_failed", error=type(exc).__name__)
+            raise
         self._sessions[sess.id] = sess
         self.stats["sessions_started"] += 1
         log_event("session_started", returning=bool(sess.memory_block))

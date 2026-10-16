@@ -47,7 +47,8 @@ class GeminiLLM:
                 return schema.model_validate_json(resp.text)
             except Exception as exc:                    # try the fallback model once
                 last = exc
-                log_event("model_call_failed", model=model, error=type(exc).__name__)
+                log_event("model_call_failed", model=model, error=type(exc).__name__,
+                          code=getattr(exc, "code", None), message=str(exc)[:300])
         raise last
 
     # -- public API ---------------------------------------------------------------

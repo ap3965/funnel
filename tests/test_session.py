@@ -220,3 +220,19 @@ def test_decisions_are_private_per_user_and_match_the_ui_shape():
     assert set(rows[0]) >= {"id", "created_at", "dump", "conclusion", "conclusion_kind",
                             "revisit_date", "seeded"}
     assert mgr.decisions("nobody") == []
+
+
+def test_failed_first_question_leaves_no_orphan_entry():
+    mgr, _, ledger, *_ = _make([RuntimeError("model unavailable")])
+    with pytest.raises(RuntimeError):
+        mgr.start("u1", "dump")
+    assert ledger.list_for_user("u1") == []
+
+
+def test_failed_return_visit_keeps_the_earlier_history():
+    mgr, llm, ledger, *_ = _make([Q, RuntimeError("model unavailable")])
+    mgr.start("u1", "dump")
+    with pytest.raises(RuntimeError):
+        mgr.start("u1", "dump again")
+    rec = ledger.list_for_user("u1")[0]
+    assert len(rec.mentions) == 1

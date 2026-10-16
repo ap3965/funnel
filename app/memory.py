@@ -79,6 +79,17 @@ class MemoryService:
         return MemoryContext(current.id, facts, render_for_prompt(facts),
                              self._payload(current, facts))
 
+    def discard_session(self, user_id: str, decision_id: str, session_id: str) -> None:
+        """Undo a session that failed before the user saw a question: no orphan entries."""
+        rec = self.ledger.get(user_id, decision_id)
+        if rec is None:
+            return
+        rec.mentions = [m for m in rec.mentions if m.session_id != session_id]
+        if rec.mentions:
+            self.ledger.save(rec)                  # a returning decision keeps its earlier history
+        else:
+            self.ledger.delete(user_id, decision_id)
+
     def commit(self, user_id: str, decision_id: str, kind: str, conclusion: str = "",
                next_step: str = "", revisit_date: Optional[str] = None) -> DecisionRecord:
         if kind not in CONCLUSION_KINDS:

@@ -37,6 +37,9 @@ class InMemoryLedger:
         return [DecisionRecord.from_dict(d)
                 for d in self._data.get(_safe_id(user_id), {}).values()]
 
+    def delete(self, user_id: str, decision_id: str) -> None:
+        self._data.get(_safe_id(user_id), {}).pop(decision_id, None)
+
 
 class FirestoreLedger:
     def __init__(self, project: Optional[str] = None, client=None,
@@ -61,3 +64,6 @@ class FirestoreLedger:
     def list_for_user(self, user_id: str) -> list:
         return [DecisionRecord.from_dict(s.to_dict())
                 for s in self._col(user_id).stream()]
+
+    def delete(self, user_id: str, decision_id: str) -> None:
+        self._col(user_id).document(decision_id).delete()
