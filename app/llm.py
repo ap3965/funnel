@@ -25,7 +25,7 @@ class GeminiLLM:
                                         location=config.VERTEX_LOCATION)
         else:
             if not config.GEMINI_API_KEY:
-                raise RuntimeError("GEMINI_API_KEY is not set. Copy .env.example to .env and add your key.")
+                raise EnvironmentError("GEMINI_API_KEY is not set. Copy .env.example to .env and add your key.")
             self._client = genai.Client(api_key=config.GEMINI_API_KEY)
 
     # -- internals --------------------------------------------------------------

@@ -37,27 +37,24 @@ def get_manager() -> SessionManager:
 
 
 def _run(fn, *args):
-    """Turn internal exceptions into plain-language HTTP errors."""
+    """Turn internal exceptions into short, plain messages for the user.
+    Developer detail (error type, HTTP code, API message) goes to the logs only."""
     try:
         return fn(*args)
     except HTTPException:
         raise
     except KeyError:
         raise HTTPException(404, "This session expired. Please start again.")
-    except ValueError as exc:
+    except ValueError as exc:                                 # our own input messages
         raise HTTPException(400, str(exc))
-    except RuntimeError as exc:
+    except RuntimeError as exc:                               # e.g. "Saving is unavailable right now..."
         raise HTTPException(503, str(exc))
-    except Exception as exc:                                  # model / network / Firestore
+    except Exception as exc:                                  # model / network / Firestore / setup
         code = getattr(exc, "code", None)                     # HTTP status on Google API errors
         log_event("request_failed", error=type(exc).__name__, code=code, message=str(exc)[:300])
         if code == 429:
-            raise HTTPException(503, "Gemini says the usage limit was reached. Wait a minute and try again.")
-        if code == 404:
-            raise HTTPException(503, "That Gemini model is not available for your key. Run: python scripts/check_setup.py")
-        if code in (400, 401, 403):
-            raise HTTPException(503, "Gemini rejected the request (check the API key and model). Run: python scripts/check_setup.py")
-        raise HTTPException(502, "That didn't work. Please try again in a moment. (Details are in the server terminal.)")
+            raise HTTPException(503, "The demo has reached its free usage limit. Please try again in a minute.")
+        raise HTTPException(502, "The assistant is unavailable right now. Please try again in a moment.")
 
 
 @app.get("/healthz")
