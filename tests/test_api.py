@@ -23,7 +23,7 @@ def _client():
 
 def test_health_and_index():
     c = _client()
-    assert c.get("/healthz").json() == {"ok": True}
+    assert c.get("/health").json() == {"ok": True}
     assert c.get("/").status_code == 200
 
 

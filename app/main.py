@@ -57,7 +57,7 @@ def _run(fn, *args):
         raise HTTPException(502, "The assistant is unavailable right now. Please try again in a moment.")
 
 
-@app.get("/healthz")
+@app.get("/health")
 def healthz():
     return {"ok": True}
 
