@@ -316,6 +316,18 @@
       .link-btn { background: none; border: none; color: var(--muted); text-decoration: underline;
       cursor: pointer; margin-left: 12px; font: inherit; font-size: .9rem; }
     .link-btn:hover { color: var(--text); }
+    .steps-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 18px 20px; margin-bottom: 32px; }
+    .steps-panel h2 { font-size: 1rem; margin-bottom: 4px; }
+    .steps-sub { color: var(--muted); font-size: .85rem; margin-bottom: 8px; line-height: 1.5; }
+    .step-row { padding: 12px 0; border-top: 1px solid var(--border); }
+    .step-text { font-size: .95rem; line-height: 1.5; }
+    .step-meta { color: var(--muted); font-size: .8rem; margin: 4px 0 8px; }
+    .step-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .step-actions button { background: none; border: 1px solid var(--border); color: var(--text); border-radius: 999px;
+      padding: 6px 14px; font: inherit; font-size: .85rem; cursor: pointer; }
+    .step-actions button:hover, .step-actions button:focus-visible { border-color: var(--accent); outline: none; }
+    .review-note { color: var(--muted); font-size: .9rem; margin-bottom: 20px; line-height: 1.6; }
   </style>
 </head>
 <body>
@@ -328,6 +340,12 @@
 <main>
   <!-- STATE 1: DUMP -->
   <div id="state-dump" class="state active">
+    <div id="steps-panel" class="steps-panel" style="display:none;">
+      <h2>Your next steps</h2>
+      <p class="steps-sub" id="steps-sub"></p>
+      <div id="steps-list"></div>
+      <button class="link-btn" style="margin-left:0;margin-top:10px;" onclick="remindTonight()">Remind me tonight (adds to your calendar)</button>
+    </div>
     <p class="tagline">I only ask questions. You decide.</p>
     <h1>What are you carrying around in your head?</h1>
     <p style="color:var(--muted);font-size:0.9rem;margin:10px 0 24px;line-height:1.6;">
@@ -354,6 +372,11 @@
       <button class="link-btn" onclick="goToCommit()">I know where I've landed</button>
     </div>
 
+    <div id="offer-hint" style="display:none;margin-top:14px;color:var(--muted);font-size:.9rem;">
+      Whenever you feel ready, you can write down where you landed.
+      <button class="link-btn" style="margin-left:6px;" onclick="goToCommit()">Write it down</button>
+    </div>
+
     <div id="guard-badge-wrap" style="margin-top:8px;display:none;">
       <span class="guard-badge">✓ Guard: question only</span>
     </div>
@@ -362,35 +385,45 @@
   <!-- STATE 3: COMMIT -->
   <div id="state-commit" class="state">
     <h1 style="margin-bottom:8px;">Where did you land?</h1>
-    <p style="color:var(--muted);font-size:0.9rem;margin-bottom:32px;line-height:1.6;">
-      This is yours. Write it in your own words.
+    <p style="color:var(--muted);font-size:0.9rem;margin-bottom:24px;line-height:1.6;">
+      Say it your way: what you decided, and what you'll do next. I'll sort it out.
     </p>
 
-    <div class="commit-section">
-      <label>My conclusion</label>
-      <textarea id="conclusion-input" placeholder="e.g. I'm going to keep shipping for 6 more weeks and revisit."></textarea>
+    <div id="wrap-step">
+      <textarea id="wrap-input" placeholder="e.g. I'll keep shipping for 6 more weeks. Tomorrow at 10am I'll write down three prices."></textarea>
+      <button class="primary-btn" id="wrap-btn" onclick="wrapUp()">Done →</button>
     </div>
 
-    <div class="commit-section">
-      <label>Kind of conclusion</label>
-      <div class="kind-row">
-        <button class="kind-btn selected" data-kind="decided" onclick="selectKind(this)">Decided ✓</button>
-        <button class="kind-btn" data-kind="need_more_info" onclick="selectKind(this)">Need more info</button>
-        <button class="kind-btn" data-kind="parked" onclick="selectKind(this)">Parked</button>
+    <div id="review-step" style="display:none;">
+      <p class="review-note">Here's what I heard, in your words. Fix anything that's off, then save.</p>
+
+      <div class="commit-section">
+        <label>My conclusion</label>
+        <textarea id="conclusion-input"></textarea>
       </div>
-    </div>
 
-    <div class="commit-section">
-      <label>My next step</label>
-      <textarea id="nextstep-input" placeholder="One concrete thing I will do next."></textarea>
-    </div>
+      <div class="commit-section">
+        <label>Kind of conclusion</label>
+        <div class="kind-row">
+          <button class="kind-btn selected" data-kind="decided" onclick="selectKind(this)">Decided ✓</button>
+          <button class="kind-btn" data-kind="need_more_info" onclick="selectKind(this)">Need more info</button>
+          <button class="kind-btn" data-kind="parked" onclick="selectKind(this)">Parked</button>
+        </div>
+      </div>
 
-    <div class="commit-section">
-      <label for="revisit-input">Revisit date (optional)</label>
-      <input type="date" id="revisit-input" />
-    </div>
+      <div class="commit-section">
+        <label>My next step</label>
+        <textarea id="nextstep-input" placeholder="Leave empty if you don't have one yet."></textarea>
+      </div>
 
-    <button class="primary-btn" onclick="saveCommit()">Save to ledger →</button>
+      <div class="commit-section">
+        <label for="revisit-input">Revisit date (optional)</label>
+        <input type="date" id="revisit-input" />
+      </div>
+
+      <button class="primary-btn" onclick="saveCommit()">Save →</button>
+      <button class="link-btn" onclick="backToWrap()">Back</button>
+    </div>
 
     <!-- Timeline echo -->
     <div id="timeline-section" class="timeline-section" style="display:none;">
@@ -487,7 +520,11 @@
     document.getElementById('timeline-section').style.display = 'none';
     document.getElementById('answer-input').style.display = '';
     const send = document.getElementById('send-btn'); send.textContent = 'Send →'; send.onclick = sendAnswer;
+    document.getElementById('wrap-input').value = '';
+    document.getElementById('offer-hint').style.display = 'none';
+    backToWrap();
     showState('state-dump');
+    loadSteps();
   }
 
   // ---- Start session ----
@@ -503,7 +540,73 @@
       renderMemory(data.memory);
       displayTurn(data.first_turn);
       document.getElementById('answer-input').focus();
+      // ---- Your next steps: the user's own words, with check-in buttons ----
+  async function loadSteps() {
+    const panel = document.getElementById('steps-panel');
+    let steps = [];
+    try {
+      const all = await api('/decisions');
+      steps = all.filter(d => d.next_step && (d.step_status === 'open' || d.step_status === 'not_yet')).slice(0, 5);
+    } catch (_) {}
+    const list = document.getElementById('steps-list'); list.replaceChildren();
+    if (!steps.length) { panel.style.display = 'none'; return; }
+    document.getElementById('steps-sub').textContent = 'How did these go? Answer however it went. "Not yet" is a fine answer.';
+    steps.forEach(d => {
+      const row = el('div', 'step-row');
+      row.appendChild(el('div', 'step-text', d.next_step));
+      row.appendChild(el('div', 'step-meta', 'From: ' + truncate(d.dump, 70) +
+        (d.revisit_date ? ' · revisit ' + formatDate(d.revisit_date) : '') + (d.seeded ? ' · demo' : '')));
+      const actions = el('div', 'step-actions');
+      [['Done', 'done'], ['Not yet', 'not_yet'], ['Drop it', 'dropped']].forEach(([label, status]) => {
+        const b = el('button', '', label); b.type = 'button';
+        b.addEventListener('click', () => stepAction(d.id, status)); actions.appendChild(b);
+      });
+      row.appendChild(actions); list.appendChild(row);
+    });
+    panel.style.display = 'block';
+  }
+  async function stepAction(id, status) {
+    if (busy) return; busy = true;
+    try {
+      if (status === 'not_yet') {                       // a questions-only session about that step
+        const data = await api('/session/from-step', {method: 'POST', body: JSON.stringify({decision_id: id, direct_opt_in: directOptIn()})});
+        sessionId = data.session_id; turnCount = 0;
+        showState('state-discover'); renderMemory(data.memory); displayTurn(data.first_turn);
+        document.getElementById('answer-input').focus();
+      } else {
+        await api('/decisions/' + id + '/step', {method: 'POST', body: JSON.stringify({status})});
+        showError(status === 'done' ? 'Marked done.' : 'Dropped. No pressure.');
+        await loadSteps();
+      }
       updateStats();
+    } catch (e) { showError(e.message); } finally { busy = false; }
+  }
+
+  // ---- A calendar reminder the USER chooses (no push notifications from us) ----
+  function buildIcs(now, url) {
+    const pad = n => String(n).padStart(2, '0');
+    const esc = t => String(t).replace(/[\\;,]/g, m => '\\' + m);
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 20, 0, 0);
+    if (start <= now) start.setDate(start.getDate() + 1);
+    const end = new Date(start.getTime() + 15 * 60000);
+    const local = d => d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + 'T' + pad(d.getHours()) + pad(d.getMinutes()) + '00';
+    const stamp = now.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+    return ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Funnel//Check-in//EN', 'BEGIN:VEVENT',
+      'UID:funnel-' + now.getTime() + '@funnel', 'DTSTAMP:' + stamp,
+      'DTSTART:' + local(start), 'DTEND:' + local(end), 'SUMMARY:Funnel check-in',
+      'DESCRIPTION:' + esc('How did your next steps go? ' + url),
+      'BEGIN:VALARM', 'TRIGGER:PT0M', 'ACTION:DISPLAY', 'DESCRIPTION:Funnel check-in', 'END:VALARM',
+      'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
+  }
+  function remindTonight() {
+    const blob = new Blob([buildIcs(new Date(), location.origin + '/')], {type: 'text/calendar'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'funnel-checkin.ics';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+
+  updateStats();
+  loadSteps();
     } catch (e) {
       btn.disabled = false; btn.textContent = 'Start →';
       showError(e.message);
@@ -514,11 +617,7 @@
   function displayTurn(turn) {
     document.getElementById('question-bubble').textContent = turn.text;
     document.getElementById('guard-badge-wrap').style.display = (turn.type === 'question') ? 'block' : 'none';
-    if (turn.type === 'offer_commit') {
-      const send = document.getElementById('send-btn');
-      send.textContent = 'Write my conclusion →'; send.onclick = goToCommit;
-      document.getElementById('answer-input').style.display = 'none';
-    }
+    if (turn.offer) document.getElementById('offer-hint').style.display = 'block';   // soft hint, never blocks
   }
 
   // ---- Memory card: built from the server's counted facts ----
@@ -586,13 +685,44 @@
   // ---- Commit ----
   function goToCommit() {
     showState('state-commit');
+    backToWrap();
     if (hasMemory) document.getElementById('timeline-section').style.display = 'block';
+    document.getElementById('wrap-input').focus();
   }
-  function selectKind(btn) {
-    document.querySelectorAll('.kind-btn').forEach(b => b.classList.remove('selected'));
-    btn.classList.add('selected'); currentKind = btn.dataset.kind;
-    const label = document.querySelector('label[for="revisit-input"], .commit-section:has(#revisit-input) label');
-    if (label) label.textContent = currentKind === 'parked' ? 'Revisit date (required for parked)' : 'Revisit date (optional)';
+  function backToWrap() {
+    document.getElementById('wrap-step').style.display = '';
+    document.getElementById('review-step').style.display = 'none';
+  }
+  function setKind(kind) {
+    document.querySelectorAll('.kind-btn').forEach(b => b.classList.toggle('selected', b.dataset.kind === kind));
+    currentKind = kind;
+    const label = document.querySelector('label[for="revisit-input"]');
+    if (label) label.textContent = kind === 'parked' ? 'Revisit date (required for parked)' : 'Revisit date (optional)';
+  }
+  function selectKind(btn) { setKind(btn.dataset.kind); }
+
+  // The user writes one free-text answer. The AI only sorts what they said into fields.
+  // They review it, so nothing is saved that they didn't see.
+  async function wrapUp() {
+    const text = document.getElementById('wrap-input').value.trim();
+    if (!text || !sessionId || busy) return;
+    const btn = document.getElementById('wrap-btn');
+    busy = true; btn.disabled = true; btn.textContent = 'Reading…';
+    let proposal = null, expired = false;
+    try {
+      proposal = await api('/session/' + sessionId + '/wrap', {method: 'POST', body: JSON.stringify({text})});
+    } catch (e) {
+      showError(e.message); expired = e.status === 404;
+    } finally { busy = false; btn.disabled = false; btn.textContent = 'Done →'; }
+    if (expired) return resetToDump();
+    // If the AI couldn't read it, never block the user: show their own words to edit by hand.
+    proposal = proposal || {conclusion_kind: 'decided', conclusion: text, next_step: '', revisit_date: null};
+    document.getElementById('conclusion-input').value = proposal.conclusion || '';
+    document.getElementById('nextstep-input').value = proposal.next_step || '';
+    document.getElementById('revisit-input').value = proposal.revisit_date || '';
+    setKind(proposal.conclusion_kind || 'decided');
+    document.getElementById('wrap-step').style.display = 'none';
+    document.getElementById('review-step').style.display = 'block';
   }
   async function saveCommit() {
     if (busy) return;

@@ -27,6 +27,7 @@ def demo_records(user_id: str) -> list:
         conclusion_kind="decided",
         conclusion="Keep shipping for 6 weeks, then reassess with real usage data.",
         next_step="Ship the next two features without touching the architecture.",
+        step_status="open",
         revisit_date="2026-10-15")
     pivot = DecisionRecord(
         user_id=user_id, seeded=True, id="seed-002", created_at="2026-09-20",
@@ -37,6 +38,7 @@ def demo_records(user_id: str) -> list:
         conclusion_kind="decided",
         conclusion="Run a 2-week B2B pilot before deciding anything.",
         next_step="Book 5 discovery calls with potential B2B customers this week.",
+        step_status="open",
         revisit_date="2026-10-04")
     contractor = DecisionRecord(
         user_id=user_id, seeded=True, id="seed-003", created_at="2026-09-10",

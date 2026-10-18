@@ -18,6 +18,13 @@ class FakeLLM:
                                          "options": ["rewrite backend", "keep shipping"],
                                          "worries": ["afraid of choosing wrong"]}
         self.systems, self.histories = [], []
+        self.commit_result = {"conclusion_kind": "decided", "conclusion": "keep shipping for 6 weeks",
+                              "next_step": "write three prices tomorrow at 10am", "revisit_date": "2026-11-30"}
+        self.commit_calls = []
+
+    def extract_commit(self, text, today_iso):
+        self.commit_calls.append((text, today_iso))
+        return dict(self.commit_result)
 
     def extract(self, dump):
         return dict(self.extraction)
@@ -203,12 +210,13 @@ def test_session_cap_drops_the_oldest():
         mgr.answer(ids[0], "hi")
 
 
-def test_offer_commit_appears_once_after_enough_turns():
+def test_write_it_down_hint_never_replaces_a_question():
     mgr, llm, *_ = _make()
     sid = mgr.start("u1", "dump")["session_id"]
-    types = [mgr.answer(sid, f"a{i}")["turn"]["type"] for i in range(OFFER_COMMIT_AFTER + 1)]
-    assert types.count("offer_commit") == 1
-    assert types.index("offer_commit") == OFFER_COMMIT_AFTER - 1
+    turns = [mgr.answer(sid, f"a{i}")["turn"] for i in range(OFFER_COMMIT_AFTER + 2)]
+    assert all(t["type"] == "question" and t["text"].endswith("?") for t in turns)   # always a real question
+    assert sum(1 for t in turns if t.get("offer")) == 1                              # hinted once, softly
+    assert len(llm.histories) == OFFER_COMMIT_AFTER + 3                              # the model was asked every time
 
 
 def test_decisions_are_private_per_user_and_match_the_ui_shape():
@@ -236,3 +244,106 @@ def test_failed_return_visit_keeps_the_earlier_history():
         mgr.start("u1", "dump again")
     rec = ledger.list_for_user("u1")[0]
     assert len(rec.mentions) == 1
+
+
+# ---- wrap-up from free text ------------------------------------------------------
+def test_wrap_returns_a_proposal_and_saves_nothing():
+    mgr, llm, ledger, *_ = _make([Q])
+    sid = mgr.start("u1", "dump")["session_id"]
+    prop = mgr.wrap(sid, "I'll keep shipping for 6 weeks. Tomorrow 10am I'll write three prices.")
+    assert prop == {"conclusion_kind": "decided", "conclusion": "keep shipping for 6 weeks",
+                    "next_step": "write three prices tomorrow at 10am", "revisit_date": "2026-11-30"}
+    assert llm.commit_calls and ledger.list_for_user("u1")[0].conclusion is None
+
+
+def test_wrap_cleans_up_bad_model_output():
+    mgr, llm, *_ = _make([Q])
+    sid = mgr.start("u1", "dump")["session_id"]
+    llm.commit_result = {"conclusion_kind": "banana", "conclusion": "", "next_step": "", "revisit_date": "next friday"}
+    prop = mgr.wrap(sid, "Honestly I just need to sleep on it.")
+    assert prop["conclusion_kind"] == "decided"
+    assert prop["conclusion"] == "Honestly I just need to sleep on it."      # falls back to their own words
+    assert prop["next_step"] == "" and prop["revisit_date"] is None
+
+
+def test_wrap_validation():
+    mgr, *_ = _make([Q])
+    sid = mgr.start("u1", "dump")["session_id"]
+    with pytest.raises(ValueError):
+        mgr.wrap(sid, "  ")
+    with pytest.raises(ValueError):
+        mgr.wrap(sid, "x" * (config.MAX_ANSWER_CHARS + 1))
+    with pytest.raises(KeyError):
+        mgr.wrap("nope", "hi")
+
+
+# ---- next steps: status, check-in, "not yet" -------------------------------------
+def _with_saved_step(turns=None):
+    mgr, llm, ledger, memory, clock = _make(turns or [Q, Q])
+    out = mgr.start("u1", "dump")
+    res = mgr.commit(out["session_id"], "decided", "keep shipping", "write three prices tomorrow at 10am", "2026-11-30")
+    return mgr, llm, ledger, memory, res["decision_id"]
+
+
+def test_commit_with_a_next_step_marks_it_open():
+    mgr, _, ledger, _, did = _with_saved_step()
+    assert ledger.get("u1", did).step_status == "open"
+    row = mgr.decisions("u1")[0]
+    assert row["step_status"] == "open" and row["next_step"].startswith("write three prices")
+
+
+def test_commit_without_a_next_step_has_no_status():
+    mgr, _, ledger, *_ = _make([Q])
+    out = mgr.start("u1", "dump")
+    res = mgr.commit(out["session_id"], "need_more_info", "I need two customer calls first")
+    assert ledger.get("u1", res["decision_id"]).step_status is None
+
+
+def test_user_can_mark_their_step_done_or_dropped():
+    mgr, _, ledger, _, did = _with_saved_step()
+    assert mgr.set_step("u1", did, "done")["step_status"] == "done"
+    assert mgr.set_step("u1", did, "dropped")["step_status"] == "dropped"
+    with pytest.raises(ValueError):
+        mgr.set_step("u1", did, "open")
+    with pytest.raises(ValueError):
+        mgr.set_step("u1", did, "banana")
+
+
+def test_not_yet_opens_a_session_about_that_decision():
+    mgr, llm, ledger, _, did = _with_saved_step([Q, Q])
+    out = mgr.start_from_step("u1", did)
+    assert out["turn"]["text"] == Q["text"] and out["memory"]["times_raised"] == 2
+    system = llm.systems[-1]
+    assert "write three prices tomorrow at 10am" in system            # the user's own next step, from memory
+    assert 'My next step was: "write three prices tomorrow at 10am"' in llm.histories[-1][0]["text"]
+    assert ledger.get("u1", did).step_status == "not_yet"
+    assert len(ledger.list_for_user("u1")) == 1                        # same decision, not a duplicate
+    # the new session is a normal session: it can be answered and committed
+    sid = out["session_id"]
+    assert mgr.answer(sid, "I got scared of the number.")["turn"]["type"] == "question"
+    res = mgr.commit(sid, "decided", "go with flat pricing", "post it on Friday 5pm", "2026-12-01")
+    assert res["decision_id"] == did and ledger.get("u1", did).step_status == "open"
+
+
+def test_not_yet_failure_leaves_no_extra_mention():
+    mgr, llm, ledger, _, did = _with_saved_step([Q, RuntimeError("model unavailable")])
+    with pytest.raises(RuntimeError):
+        mgr.start_from_step("u1", did)
+    assert len(ledger.get("u1", did).mentions) == 1
+
+
+def test_one_user_cannot_touch_anothers_steps():
+    mgr, _, _, _, did = _with_saved_step([Q, Q])
+    with pytest.raises(KeyError):
+        mgr.set_step("bob", did, "done")
+    with pytest.raises(KeyError):
+        mgr.start_from_step("bob", did)
+
+
+def test_not_yet_needs_a_next_step():
+    mgr, _, _, _, _ = _make([Q])
+    out = mgr.start("u1", "other dump")
+    mgr.commit(out["session_id"], "need_more_info", "need info")
+    row = [r for r in mgr.decisions("u1") if r["next_step"] is None][0]
+    with pytest.raises(KeyError):
+        mgr.start_from_step("u1", row["id"])

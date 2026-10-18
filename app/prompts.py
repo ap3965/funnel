@@ -60,6 +60,16 @@ Return JSON with:
 
 Add nothing the person did not say."""
 
+COMMIT_EXTRACTOR_SYSTEM = """You read what a person wrote about where they landed on a decision. Pull out only what THEY said. Never add anything.
+
+Return JSON with:
+- "conclusion_kind": "decided" if they chose something; "need_more_info" if they said they need to find something out first; "parked" if they said they're putting it off until later.
+- "conclusion": their conclusion, in their own words as much as possible. Don't rewrite it, polish it, or add to it. Use "" if they gave none.
+- "next_step": the next step THEY said they'll take, in their own words, including when or where if they said it. Use "" if they didn't name one. NEVER invent a step or suggest one.
+- "revisit_date": a date as YYYY-MM-DD if they gave or clearly implied when to come back to this (use TODAY below to work out words like "tomorrow" or "next Friday"). Otherwise "".
+
+TODAY is {today}."""
+
 RETRY_NOTE = """
 
 YOUR PREVIOUS REPLY WAS REJECTED because: {reasons}.

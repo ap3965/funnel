@@ -9,7 +9,8 @@ A web app where a person dumps a decision they have been carrying in their head.
 1. The AI never gives advice, plans, task lists, options the user did not name, or labels about who the user is. `app/guard.py` enforces this in code. **Never weaken or delete a guard rule to make a test pass.** Ask the human first.
 2. Every number or past event the AI mentions must come from `app/patterns.py` (counted by code). The model only phrases it.
 3. "Need more information" and "parked" are valid outcomes, not failures.
-4. Pull, not push. No notifications, no nagging, no streaks, no scorecards.
+4. Pull, not push. No notifications from us, no nagging, no streaks, no scorecards. The only reminder is a calendar file the USER chooses to download.
+   The only "tasks" in the app are the user's OWN next steps from a decision, in their words. The AI never creates, suggests or ranks tasks. Check-ins use neutral buttons (Done / Not yet / Drop it): "not yet" is a normal answer, never a failure.
 5. Each user's ledger is private (`X-User-Id`). Never expose another user's decisions.
 6. **Never log what a user typed.** Log event names, counts, and the model's own rejected text only.
 7. **Never commit secrets.** `.env` is git-ignored. Never print API keys.

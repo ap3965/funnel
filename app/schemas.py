@@ -23,6 +23,13 @@ class TurnOut(BaseModel):
     text: str
 
 
+class CommitExtractionOut(BaseModel):
+    conclusion_kind: str
+    conclusion: str
+    next_step: str
+    revisit_date: str
+
+
 # --- HTTP request bodies (field names match index.html) ----------------------------
 class StartIn(BaseModel):
     dump: str = Field(min_length=1)
@@ -38,3 +45,16 @@ class CommitIn(BaseModel):
     conclusion_kind: Literal["decided", "need_more_info", "parked"]
     next_step: str = ""
     revisit_date: Optional[date] = None
+
+
+class WrapIn(BaseModel):
+    text: str = Field(min_length=1)
+
+
+class StepIn(BaseModel):
+    status: Literal["done", "not_yet", "dropped"]
+
+
+class FromStepIn(BaseModel):
+    decision_id: str = Field(min_length=1, max_length=64)
+    direct_opt_in: bool = False

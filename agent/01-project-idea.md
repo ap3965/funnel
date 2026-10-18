@@ -10,7 +10,8 @@ People carry unresolved decisions for weeks. Common tools fail in two ways: to-d
 1. **Dump**: the user pours out the decision, messy and unorganized.
 2. **Discover**: the AI asks one question at a time (or one short observation). It finds what makes the decision hard: the feeling, the trade-off, a contradiction, an assumption. It quotes the user's own words.
 3. **Decide**: the user reaches their own conclusion. Valid outcomes: decided, need more information, parked until a date. The AI never chooses.
-4. **Move**: the user writes their own next step (ideally "when and where"). It is saved with a revisit date.
+4. **Move**: the user says where they landed in one free-text box. The AI only sorts what they said into a conclusion, a next step and a date (never inventing one); the user reviews it and saves. No long form.
+   4b. **Check in** (pull, not push): when the user opens the app, "Your next steps" lists their own saved steps with Done / Not yet / Drop it. "Not yet" opens a questions-only session about it ("What got in the way?"). An optional "Remind me tonight" button downloads a calendar event the user controls.
 5. **Revisit** (next session): Funnel uses the ledger. Two kinds of memory:
    - **Loop**: the same decision came back. ("This has come up 2 times. Last time you decided X. Your revisit date has passed.")
    - **Echo**: a different decision with a similar worry. ("Last time you were afraid of choosing wrong and tried a smaller version first. Does that change how you see this?")
@@ -36,7 +37,7 @@ Session 2: the user dumps a new dilemma. Funnel shows a "What I remembered" card
 - Theme: Future of Work and enterprise productivity: decisions and workflow execution.
 
 ## What Funnel is NOT
-Not a to-do app, scheduler, or coach. Not a mental-health product: it does not diagnose, treat, or claim to reduce anxiety. No notifications. No methodology marketplace, no adaptive layouts (cut deliberately).
+Not a general to-do app, scheduler, or coach. The only tasks are the user's own next steps from a decision; the AI never writes them. Not a mental-health product: it does not diagnose, treat, or claim to reduce anxiety. No notifications. No methodology marketplace, no adaptive layouts (cut deliberately).
 
 ## Honest risks (do not hide these in the deck)
 - The general "AI that asks questions" space is crowded; our edge is the guard plus the per-user ledger with loop and echo memory.

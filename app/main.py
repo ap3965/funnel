@@ -5,7 +5,7 @@ POST /session/{id}/turn    {answer}                                  -> {type, t
 POST /session/{id}/commit  {conclusion, conclusion_kind, next_step, revisit_date?} -> {ok, decision_id}
 GET  /decisions            header X-User-Id                          -> this user's ledger
 GET  /stats                                                          -> guard counters (for the deck)
-GET  /healthz, GET /
+GET  /health, GET /
 """
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ from fastapi import FastAPI, Header, HTTPException
 from fastapi.responses import FileResponse
 
 from .logs import log_event
-from .schemas import AnswerIn, CommitIn, StartIn
+from .schemas import AnswerIn, CommitIn, FromStepIn, StartIn, StepIn, WrapIn
 from .session import SessionManager
 
 app = FastAPI(title="Funnel")
@@ -26,7 +26,7 @@ _EMPTY_STATS = {"sessions_started": 0, "turns": 0, "guard_checked": 0, "guard_re
 
 
 def get_manager() -> SessionManager:
-    """Built on first use, so the app starts (and /healthz works) even before a key is set."""
+    """Built on first use, so the app starts (and /health works) even before a key is set."""
     global _manager
     if _manager is None:
         from .llm import get_llm
@@ -36,7 +36,7 @@ def get_manager() -> SessionManager:
     return _manager
 
 
-def _run(fn, *args):
+def _run(fn, *args, missing="This session expired. Please start again."):
     """Turn internal exceptions into short, plain messages for the user.
     Developer detail (error type, HTTP code, API message) goes to the logs only."""
     try:
@@ -44,7 +44,7 @@ def _run(fn, *args):
     except HTTPException:
         raise
     except KeyError:
-        raise HTTPException(404, "This session expired. Please start again.")
+        raise HTTPException(404, missing)
     except ValueError as exc:                                 # our own input messages
         raise HTTPException(400, str(exc))
     except RuntimeError as exc:                               # e.g. "Saving is unavailable right now..."
@@ -54,11 +54,13 @@ def _run(fn, *args):
         log_event("request_failed", error=type(exc).__name__, code=code, message=str(exc)[:300])
         if code == 429:
             raise HTTPException(503, "The demo has reached its free usage limit. Please try again in a minute.")
+        if code in (500, 503, 504):
+            raise HTTPException(503, "The assistant is busy right now. Please try again in a few seconds.")
         raise HTTPException(502, "The assistant is unavailable right now. Please try again in a moment.")
 
 
-@app.get("/health")
-def healthz():
+@app.get("/health")        # NOTE: /healthz is reserved by Google on Cloud Run
+def health():
     return {"ok": True}
 
 
@@ -67,6 +69,29 @@ def create_session(body: StartIn, x_user_id: str = Header(default="anon")):
     mgr = _run(get_manager)
     out = _run(mgr.start, x_user_id, body.dump, body.direct_opt_in)
     return {"session_id": out["session_id"], "first_turn": out["turn"], "memory": out["memory"]}
+
+
+@app.post("/session/from-step")
+def session_from_step(body: FromStepIn, x_user_id: str = Header(default="anon")):
+    """The user said "not yet" about their own next step: open a session about it."""
+    mgr = _run(get_manager)
+    out = _run(mgr.start_from_step, x_user_id, body.decision_id, body.direct_opt_in,
+               missing="That item isn't in your list any more.")
+    return {"session_id": out["session_id"], "first_turn": out["turn"], "memory": out["memory"]}
+
+
+@app.post("/session/{session_id}/wrap")
+def session_wrap(session_id: str, body: WrapIn):
+    """Free-text wrap-up -> a PROPOSED conclusion / next step / date. Saves nothing."""
+    mgr = _run(get_manager)
+    return _run(mgr.wrap, session_id, body.text)
+
+
+@app.post("/decisions/{decision_id}/step")
+def decision_step(decision_id: str, body: StepIn, x_user_id: str = Header(default="anon")):
+    mgr = _run(get_manager)
+    return _run(mgr.set_step, x_user_id, decision_id, body.status,
+                missing="That item isn't in your list any more.")
 
 
 @app.post("/session/{session_id}/turn")

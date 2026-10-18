@@ -13,6 +13,8 @@ from typing import Optional
 
 # "need_more_info" and "parked" are valid outcomes, not failures.
 CONCLUSION_KINDS = ("decided", "need_more_info", "parked")
+# The user's own next step: open -> done / not_yet / dropped. Never a score, never a streak.
+STEP_STATUSES = ("open", "done", "not_yet", "dropped")
 
 
 def _today_iso() -> str:
@@ -39,6 +41,8 @@ class DecisionRecord:
     conclusion_kind: Optional[str] = None         # decided | need_more_info | parked
     conclusion: Optional[str] = None              # the user's own words
     next_step: Optional[str] = None               # the user's own words
+    step_status: Optional[str] = None             # open | done | not_yet | dropped (None = no next step)
+    step_updated_at: Optional[str] = None
     revisit_date: Optional[str] = None
     outcome_note: Optional[str] = None            # filled in later, after it happened
     seeded: bool = False                          # True = demo history, shown as such in the UI

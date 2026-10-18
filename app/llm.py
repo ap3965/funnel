@@ -11,8 +11,9 @@ from __future__ import annotations
 
 from . import config
 from .logs import log_event
-from .prompts import EXTRACTOR_SYSTEM
-from .schemas import ExtractionOut, TurnOut
+from .prompts import COMMIT_EXTRACTOR_SYSTEM, EXTRACTOR_SYSTEM
+from .retry import run_with_fallback
+from .schemas import CommitExtractionOut, ExtractionOut, TurnOut
 
 
 class GeminiLLM:
@@ -39,22 +40,28 @@ class GeminiLLM:
                                       response_mime_type="application/json",
                                       response_schema=schema,
                                       temperature=temperature)
-        last = None
-        for model in dict.fromkeys([config.GEMINI_MODEL, config.GEMINI_FALLBACK_MODEL]):
-            try:
-                resp = self._client.models.generate_content(
-                    model=model, contents=self._contents(messages), config=cfg)
-                return schema.model_validate_json(resp.text)
-            except Exception as exc:                    # try the fallback model once
-                last = exc
-                log_event("model_call_failed", model=model, error=type(exc).__name__,
-                          code=getattr(exc, "code", None), message=str(exc)[:300])
-        raise last
+
+        def attempt(model: str):
+            resp = self._client.models.generate_content(
+                model=model, contents=self._contents(messages), config=cfg)
+            return schema.model_validate_json(resp.text)
+
+        def note(model, n, exc):
+            log_event("model_call_failed", model=model, attempt=n, error=type(exc).__name__,
+                      code=getattr(exc, "code", None), message=str(exc)[:300])
+
+        models = list(dict.fromkeys([config.GEMINI_MODEL, config.GEMINI_FALLBACK_MODEL]))
+        return run_with_fallback(attempt, models, on_error=note)
 
     # -- public API ---------------------------------------------------------------
     def extract(self, dump: str) -> dict:
         out = self._generate(EXTRACTOR_SYSTEM, [{"role": "user", "text": dump}],
                              ExtractionOut, temperature=0.2)
+        return out.model_dump()
+
+    def extract_commit(self, text: str, today_iso: str) -> dict:
+        out = self._generate(COMMIT_EXTRACTOR_SYSTEM.format(today=today_iso),
+                             [{"role": "user", "text": text}], CommitExtractionOut, temperature=0.1)
         return out.model_dump()
 
     def next_turn(self, system: str, messages: list) -> dict:

@@ -156,7 +156,7 @@ $ gcloud run deploy funnel --source . --region asia-south1 --allow-unauthenticat
 
 **F7. Check:** the command prints a `Service URL`. Then:
 ```
-$ curl <SERVICE_URL>/healthz        # should print {"ok":true}
+$ curl <SERVICE_URL>/health         # should print {"ok":true}
 ```
 Open the URL on your phone. Do one full session.
 

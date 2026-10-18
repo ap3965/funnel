@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import time
 import uuid
+from datetime import date
 from dataclasses import dataclass, field
 from typing import Callable, Optional
 
@@ -18,9 +19,7 @@ from .prompts import FALLBACK_QUESTIONS, INTERROGATOR_SYSTEM, RETRY_NOTE
 
 MAX_ATTEMPTS = 3          # first try + two regenerations
 MAX_TURNS = 30            # per session, to protect the quota
-OFFER_COMMIT_AFTER = 6    # model turns before we offer to write a conclusion
-OFFER_TEXT = ("It sounds like you've explored this well. Do you feel ready to name where "
-              "you've landed, even if it's 'I need more time'?")
+OFFER_COMMIT_AFTER = 8    # after this many model turns, show a soft "write it down" link (never replaces a question)
 _KINDS = ("question", "observation")
 
 
@@ -116,10 +115,11 @@ class SessionManager:
         if sess.turns >= MAX_TURNS:
             raise ValueError("This session has reached its limit. Save your decision or start again.")
         sess.messages.append({"role": "user", "text": text})
+        turn = self._next_turn(sess)
         if sess.turns >= OFFER_COMMIT_AFTER and not sess.offered:
-            sess.offered = True                       # offered once; the user may keep going
-            return {"turn": {"type": "offer_commit", "text": OFFER_TEXT}}
-        return {"turn": self._next_turn(sess)}
+            sess.offered = True                  # one soft hint; the conversation carries on normally
+            turn = {**turn, "offer": True}
+        return {"turn": turn}
 
     def commit(self, session_id: str, kind: str, conclusion: str = "",
                next_step: str = "", revisit_date: Optional[str] = None) -> dict:
@@ -134,6 +134,59 @@ class SessionManager:
         log_event("decision_committed", kind=kind)
         return {"saved": True, "decision_id": rec.id, "kind": rec.conclusion_kind,
                 "revisit_date": rec.revisit_date}
+
+    def wrap(self, session_id: str, text: str) -> dict:
+        """Turn the user's free-text wrap-up into a PROPOSED record. Nothing is saved yet:
+        the user reviews it and presses save. Only what the user said; nothing invented."""
+        self._get(session_id)
+        text = (text or "").strip()
+        if not text:
+            raise ValueError("Write a few words about where you landed first.")
+        if len(text) > config.MAX_ANSWER_CHARS:
+            raise ValueError(f"That is too long. Keep it under {config.MAX_ANSWER_CHARS} characters.")
+        today = date.today()
+        raw = self.llm.extract_commit(text, today.isoformat())
+        kind = raw.get("conclusion_kind")
+        revisit = _clean(raw.get("revisit_date"), 10)
+        try:
+            revisit = date.fromisoformat(revisit).isoformat() if revisit else ""
+        except ValueError:
+            revisit = ""
+        return {"conclusion_kind": kind if kind in ("decided", "need_more_info", "parked") else "decided",
+                "conclusion": _clean(raw.get("conclusion"), config.MAX_FIELD_CHARS) or _clean(text, config.MAX_FIELD_CHARS),
+                "next_step": _clean(raw.get("next_step"), config.MAX_FIELD_CHARS),
+                "revisit_date": revisit or None}
+
+    def start_from_step(self, user_id: str, decision_id: str, direct_opt_in: bool = False) -> dict:
+        """The user said "not yet" about their own next step. Open a session about it."""
+        rec = self.memory.ledger.get(user_id, decision_id)
+        if rec is None or not rec.next_step:
+            raise KeyError("unknown decision")
+        self._purge()
+        now = self.clock()
+        sess = Session(id=uuid.uuid4().hex, user_id=user_id, decision_id=decision_id,
+                       messages=[{"role": "user", "text":
+                                  f'My next step was: "{rec.next_step}". I haven\'t done it yet.'}],
+                       created=now, last_used=now)
+        self.memory.update_step(user_id, decision_id, "not_yet")
+        ctx = self.memory.reopen(user_id, sess.id, decision_id, direct_opt_in)
+        sess.memory_block, sess.memory_payload = ctx.prompt_block, ctx.payload
+        try:
+            turn = self._next_turn(sess)
+        except Exception:
+            try:
+                self.memory.discard_session(user_id, decision_id, sess.id)
+            except Exception as exc:
+                log_event("discard_failed", error=type(exc).__name__)
+            raise
+        self._sessions[sess.id] = sess
+        self.stats["sessions_started"] += 1
+        log_event("session_reopened")
+        return {"session_id": sess.id, "turn": turn, "memory": sess.memory_payload}
+
+    def set_step(self, user_id: str, decision_id: str, status: str) -> dict:
+        rec = self.memory.update_step(user_id, decision_id, status)
+        return {"decision_id": rec.id, "step_status": rec.step_status}
 
     def decisions(self, user_id: str) -> list:
         return self.memory.list_for_ui(user_id)

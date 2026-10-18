@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Callable, Optional
 
-from .ledger import CONCLUSION_KINDS, DecisionRecord, Mention
+from .ledger import CONCLUSION_KINDS, STEP_STATUSES, DecisionRecord, Mention
 from .logs import log_event
 from .patterns import Facts, compute_facts, render_for_prompt
 
@@ -103,8 +103,37 @@ class MemoryService:
         rec.conclusion = conclusion.strip() or None
         rec.next_step = next_step.strip() or None
         rec.revisit_date = revisit_date
+        if rec.next_step:
+            rec.step_status, rec.step_updated_at = "open", self.today_fn().isoformat()
+        else:
+            rec.step_status, rec.step_updated_at = None, None
         self.ledger.save(rec)
         return rec
+
+    def update_step(self, user_id: str, decision_id: str, status: str) -> DecisionRecord:
+        """The user marks their own next step done / not yet / dropped."""
+        if status not in STEP_STATUSES or status == "open":
+            raise ValueError("status must be done, not_yet or dropped")
+        rec = self.ledger.get(user_id, decision_id)
+        if rec is None or not rec.next_step:
+            raise KeyError("unknown decision")
+        rec.step_status, rec.step_updated_at = status, self.today_fn().isoformat()
+        self.ledger.save(rec)
+        return rec
+
+    def reopen(self, user_id: str, session_id: str, decision_id: str,
+               direct_opt_in: bool = False) -> MemoryContext:
+        """Start a session about an existing decision (the user said "not yet")."""
+        rec = self.ledger.get(user_id, decision_id)
+        if rec is None:
+            raise KeyError("unknown decision")
+        today = self.today_fn()
+        rec.mentions.append(Mention(session_id, today.isoformat()))
+        history = self.ledger.list_for_user(user_id)
+        echoes = self.matcher.find_echoes(rec, history, exclude_ids={rec.id})
+        facts = compute_facts(rec, echoes, today, direct_opt_in)
+        self.ledger.save(rec)
+        return MemoryContext(rec.id, facts, render_for_prompt(facts), self._payload(rec, facts))
 
     def record_outcome(self, user_id: str, decision_id: str, note: str) -> DecisionRecord:
         rec = self.ledger.get(user_id, decision_id)
@@ -119,7 +148,8 @@ class MemoryService:
         recs = sorted(self.ledger.list_for_user(user_id), key=lambda r: r.created_at, reverse=True)
         return [{"id": r.id, "created_at": r.created_at, "dump": r.title,
                  "conclusion": r.conclusion, "conclusion_kind": r.conclusion_kind,
-                 "next_step": r.next_step, "revisit_date": r.revisit_date,
+                 "next_step": r.next_step, "step_status": r.step_status,
+                 "revisit_date": r.revisit_date,
                  "seeded": r.seeded, "times_raised": len(r.mentions)} for r in recs]
 
     @staticmethod

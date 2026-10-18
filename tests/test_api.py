@@ -63,3 +63,29 @@ def test_stats_endpoint():
     c = _client()
     c.post("/session", json={"dump": "x"}, headers={"X-User-Id": "u1"})
     assert c.get("/stats").json()["guard_checked"] >= 1
+
+
+def test_wrap_then_commit_then_step_flow():
+    c = _client()
+    h = {"X-User-Id": "u1"}
+    sid = c.post("/session", json={"dump": "Should I rewrite it?"}, headers=h).json()["session_id"]
+    prop = c.post(f"/session/{sid}/wrap", json={"text": "Keep shipping. Tomorrow 10am write three prices."}).json()
+    assert set(prop) == {"conclusion_kind", "conclusion", "next_step", "revisit_date"}
+    c.post(f"/session/{sid}/commit", json={"conclusion": prop["conclusion"], "conclusion_kind": prop["conclusion_kind"],
+                                           "next_step": prop["next_step"], "revisit_date": prop["revisit_date"]})
+    row = c.get("/decisions", headers=h).json()[0]
+    assert row["step_status"] == "open"
+    assert c.post(f"/decisions/{row['id']}/step", json={"status": "done"}, headers=h).json()["step_status"] == "done"
+    assert c.post(f"/decisions/{row['id']}/step", json={"status": "open"}, headers=h).status_code == 422
+    assert c.post(f"/decisions/{row['id']}/step", json={"status": "done"}, headers={"X-User-Id": "bob"}).status_code == 404
+
+
+def test_not_yet_starts_a_session():
+    c = _client()
+    h = {"X-User-Id": "u1"}
+    sid = c.post("/session", json={"dump": "Should I rewrite it?"}, headers=h).json()["session_id"]
+    c.post(f"/session/{sid}/commit", json={"conclusion": "ship", "conclusion_kind": "decided", "next_step": "write prices"})
+    did = c.get("/decisions", headers=h).json()[0]["id"]
+    r = c.post("/session/from-step", json={"decision_id": did}, headers=h)
+    assert r.status_code == 200 and r.json()["first_turn"]["text"].endswith("?")
+    assert c.post("/session/from-step", json={"decision_id": "nope"}, headers=h).status_code == 404

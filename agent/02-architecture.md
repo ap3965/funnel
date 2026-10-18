@@ -21,21 +21,26 @@ FastAPI (app/main.py)  ->  SessionManager (app/session.py)
 2. `memory.prepare(user, session, title, options, worries)`: embeds, finds a SAME decision (loop) or creates a new record; finds ECHOES from other concluded decisions using the **fresh** worries; `patterns.compute_facts` counts; `render_for_prompt` builds the block.
 3. Interrogator system prompt = `INTERROGATOR_SYSTEM` + memory block. Full conversation history is sent every turn.
 4. Reply passes `guard.check`. Hard problem: regenerate with the reasons (max 3 attempts), then a fixed safe question. Soft problem: allowed, logged.
-5. After 6 model turns the server sends one fixed `offer_commit` turn (not LLM-written). The user can also go to commit any time.
-6. `POST /session/{id}/commit` -> record gets `conclusion_kind`, conclusion, next step, revisit date (parked requires a date).
+5. After 8 model turns the turn carries `offer: true` once, which shows a small "Write it down" link. It never replaces the AI's question and never hides the answer box. The user can wrap up any time with "I know where I've landed".
+6. `POST /session/{id}/wrap {text}` -> `llm.extract_commit` proposes `{conclusion_kind, conclusion, next_step, revisit_date}` from the user's free text (only what they said; saves nothing). The UI shows it for review.
+7. `POST /session/{id}/commit` saves it (parked requires a date). A saved next step gets `step_status=open`.
+8. Check-in: `GET /decisions` lists the user's open steps; `POST /decisions/{id}/step {done|not_yet|dropped}`; `POST /session/from-step {decision_id}` opens a session about a step marked not yet (`memory.reopen`, a returning mention, the step in the facts block).
 
 ## API (shapes are used by index.html: do not change without updating both)
 | Route | Body | Returns |
 |---|---|---|
 | `POST /session` (header `X-User-Id`) | `{dump, direct_opt_in?}` | `{session_id, first_turn, memory}` |
-| `POST /session/{id}/turn` | `{answer}` | `{type, text}` (`question`, `observation`, `offer_commit`) |
+| `POST /session/{id}/turn` | `{answer}` | `{type, text}` (`question` or `observation`, plus `offer: true` once) |
+| `POST /session/{id}/wrap` | `{text}` | `{conclusion_kind, conclusion, next_step, revisit_date}` (proposal) |
 | `POST /session/{id}/commit` | `{conclusion, conclusion_kind, next_step, revisit_date?}` | `{ok, decision_id}` |
+| `POST /decisions/{id}/step` (header) | `{status: done\|not_yet\|dropped}` | `{decision_id, step_status}` |
+| `POST /session/from-step` (header) | `{decision_id}` | `{session_id, first_turn, memory}` |
 | `GET /decisions` (header) | | this user's ledger only |
 | `GET /stats` | | guard counters for the deck |
-| `GET /healthz`, `GET /` | | health, the UI |
+| `GET /health`, `GET /` | | health (not `/healthz`: Google reserves that path on Cloud Run), the UI |
 
 ## Data model (`DecisionRecord`)
-`id, user_id, title, worries[], options[], created_at, mentions[{session_id, at}], conclusion_kind (decided|need_more_info|parked), conclusion, next_step, revisit_date, outcome_note, seeded, topic_embedding, worry_embedding`. Firestore path: `users/{user_id}/decisions/{id}`. `times_raised = len(mentions)`.
+`id, user_id, title, worries[], options[], created_at, mentions[{session_id, at}], conclusion_kind (decided|need_more_info|parked), conclusion, next_step, step_status (open|done|not_yet|dropped), step_updated_at, revisit_date, outcome_note, seeded, topic_embedding, worry_embedding`. Firestore path: `users/{user_id}/decisions/{id}`. `times_raised = len(mentions)`.
 
 ## Guard (`app/guard.py`)
 - **Hard (reject):** numbered/bulleted lines; plan wording; wrap-up lines ("Is there anything else?"); advice in statements ("you should", "I recommend", "my advice", "it's better to"); commands at the start of a sentence ("Try...", "Consider...", "Take..."); "why not try..."; more than 2 questions; over 120 words; `type=question` without a "?".

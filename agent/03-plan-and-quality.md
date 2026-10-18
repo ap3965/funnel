@@ -9,6 +9,9 @@
 **M3: Memory works on real embeddings (Oct 17).** `python -m eval.run_match_eval`: tune thresholds or add the LLM tiebreak; record accuracy. Seed Firestore (`USE_FIRESTORE=1 python -m scripts.seed`), open `?user=demo-ravi`, dump the backend-rewrite scenario: expect a loop card and an echo.
 **M4: Evidence + submission (Oct 17).** 3 real testers, two sessions each, a few days apart if possible (else same day, clearly labelled). Deck (PDF), 3-minute video, README. Submit tonight; Oct 18 is buffer only.
 
+## Already built (do not rebuild)
+Guard, loop + echo memory, free-text wrap-up with review, next-steps check-in (Done / Not yet / Drop it), calendar reminder file, per-user ledger, plain-English voice.
+
 ## Technical work, in priority order
 1. Keep tests green; fix anything real the first run reveals.
 2. Prompt quality (`app/prompts.py`): this is the 40% + 25%.
