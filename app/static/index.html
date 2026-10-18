@@ -1,12 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Funnel</title>
   <style>
     /* ---- Reset & Base ---- */
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
     :root {
       --bg: #0f0f11;
       --surface: #1a1a1f;
@@ -20,6 +28,7 @@
       --radius: 12px;
       --font: 'Inter', system-ui, sans-serif;
     }
+
     body {
       font-family: var(--font);
       background: var(--bg);
@@ -39,8 +48,17 @@
       justify-content: space-between;
       align-items: center;
     }
-    .logo { font-size: 1.25rem; font-weight: 700; letter-spacing: -0.5px; }
-    .logo span { color: var(--accent); }
+
+    .logo {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    .logo span {
+      color: var(--accent);
+    }
+
     .ledger-btn {
       font-size: 0.8rem;
       color: var(--muted);
@@ -51,7 +69,11 @@
       cursor: pointer;
       transition: border-color 0.2s;
     }
-    .ledger-btn:hover { border-color: var(--accent); color: var(--text); }
+
+    .ledger-btn:hover {
+      border-color: var(--accent);
+      color: var(--text);
+    }
 
     main {
       width: 100%;
@@ -61,22 +83,32 @@
     }
 
     /* ---- States ---- */
-    .state { display: none; }
-    .state.active { display: block; }
+    .state {
+      display: none;
+    }
+
+    .state.active {
+      display: block;
+    }
 
     /* ---- Dump state ---- */
-    #state-dump { animation: fadeIn 0.3s; }
+    #state-dump {
+      animation: fadeIn 0.3s;
+    }
+
     .tagline {
       font-size: 0.85rem;
       color: var(--muted);
       margin-bottom: 28px;
     }
+
     h1 {
       font-size: 2rem;
       font-weight: 700;
       line-height: 1.2;
       margin-bottom: 10px;
     }
+
     textarea {
       width: 100%;
       min-height: 180px;
@@ -92,8 +124,15 @@
       outline: none;
       transition: border-color 0.2s;
     }
-    textarea:focus { border-color: var(--accent); }
-    textarea::placeholder { color: var(--muted); }
+
+    textarea:focus {
+      border-color: var(--accent);
+    }
+
+    textarea::placeholder {
+      color: var(--muted);
+    }
+
     .primary-btn {
       margin-top: 16px;
       width: 100%;
@@ -107,11 +146,21 @@
       cursor: pointer;
       transition: opacity 0.2s;
     }
-    .primary-btn:hover { opacity: 0.88; }
-    .primary-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .primary-btn:hover {
+      opacity: 0.88;
+    }
+
+    .primary-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
 
     /* ---- Discover state ---- */
-    #state-discover { animation: fadeIn 0.3s; }
+    #state-discover {
+      animation: fadeIn 0.3s;
+    }
+
     .memory-card {
       background: var(--surface);
       border: 1px solid var(--accent-dim);
@@ -121,6 +170,7 @@
       font-size: 0.88rem;
       color: var(--muted);
     }
+
     .memory-card h3 {
       font-size: 0.75rem;
       text-transform: uppercase;
@@ -128,7 +178,11 @@
       color: var(--accent);
       margin-bottom: 8px;
     }
-    .memory-card p { line-height: 1.6; }
+
+    .memory-card p {
+      line-height: 1.6;
+    }
+
     .question-bubble {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -139,9 +193,22 @@
       margin-bottom: 24px;
       min-height: 72px;
     }
-    .loading-dots { color: var(--muted); font-style: italic; }
-    .answer-area { display: flex; flex-direction: column; gap: 12px; }
-    .answer-area textarea { min-height: 100px; }
+
+    .loading-dots {
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    .answer-area {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .answer-area textarea {
+      min-height: 100px;
+    }
+
     .guard-badge {
       font-size: 0.75rem;
       color: var(--green);
@@ -153,8 +220,14 @@
     }
 
     /* ---- Commit state ---- */
-    #state-commit { animation: fadeIn 0.3s; }
-    .commit-section { margin-bottom: 28px; }
+    #state-commit {
+      animation: fadeIn 0.3s;
+    }
+
+    .commit-section {
+      margin-bottom: 28px;
+    }
+
     .commit-section label {
       display: block;
       font-size: 0.8rem;
@@ -163,8 +236,18 @@
       color: var(--muted);
       margin-bottom: 8px;
     }
-    .commit-section textarea { min-height: 80px; }
-    .kind-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+
+    .commit-section textarea {
+      min-height: 80px;
+    }
+
+    .kind-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+    }
+
     .kind-btn {
       flex: 1;
       min-width: 120px;
@@ -178,11 +261,13 @@
       transition: all 0.2s;
       text-align: center;
     }
+
     .kind-btn.selected {
       border-color: var(--accent);
       color: var(--text);
       background: var(--accent-dim);
     }
+
     input[type="date"] {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -193,7 +278,10 @@
       width: 100%;
       outline: none;
     }
-    input[type="date"]:focus { border-color: var(--accent); }
+
+    input[type="date"]:focus {
+      border-color: var(--accent);
+    }
 
     /* ---- Timeline ---- */
     .timeline-section {
@@ -201,6 +289,7 @@
       padding-top: 32px;
       border-top: 1px solid var(--border);
     }
+
     .timeline-section h2 {
       font-size: 0.8rem;
       text-transform: uppercase;
@@ -208,12 +297,14 @@
       color: var(--muted);
       margin-bottom: 20px;
     }
+
     .timeline-item {
       display: flex;
       gap: 16px;
       margin-bottom: 20px;
       position: relative;
     }
+
     .timeline-dot {
       width: 10px;
       height: 10px;
@@ -222,7 +313,11 @@
       margin-top: 6px;
       flex-shrink: 0;
     }
-    .timeline-dot.dim { background: var(--border); }
+
+    .timeline-dot.dim {
+      background: var(--border);
+    }
+
     .timeline-connector {
       position: absolute;
       left: 4px;
@@ -231,10 +326,28 @@
       width: 2px;
       background: var(--border);
     }
-    .timeline-content { flex: 1; }
-    .timeline-date { font-size: 0.75rem; color: var(--muted); margin-bottom: 4px; }
-    .timeline-decision { font-size: 0.95rem; line-height: 1.5; }
-    .timeline-outcome { font-size: 0.8rem; color: var(--muted); margin-top: 4px; }
+
+    .timeline-content {
+      flex: 1;
+    }
+
+    .timeline-date {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .timeline-decision {
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+
+    .timeline-outcome {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
     .echo-badge {
       display: inline-block;
       font-size: 0.7rem;
@@ -250,14 +363,18 @@
       display: none;
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,0.7);
+      background: rgba(0, 0, 0, 0.7);
       z-index: 100;
       justify-content: center;
       align-items: flex-start;
       padding: 60px 16px;
       overflow-y: auto;
     }
-    .overlay.open { display: flex; }
+
+    .overlay.open {
+      display: flex;
+    }
+
     .overlay-panel {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -266,7 +383,12 @@
       max-width: 640px;
       padding: 32px;
     }
-    .overlay-panel h2 { font-size: 1.2rem; margin-bottom: 24px; }
+
+    .overlay-panel h2 {
+      font-size: 1.2rem;
+      margin-bottom: 24px;
+    }
+
     .close-btn {
       float: right;
       background: none;
@@ -276,14 +398,25 @@
       cursor: pointer;
       line-height: 1;
     }
+
     .ledger-item {
       border: 1px solid var(--border);
       border-radius: var(--radius);
       padding: 16px;
       margin-bottom: 14px;
     }
-    .ledger-item .dump-preview { font-size: 0.95rem; line-height: 1.5; margin-bottom: 8px; }
-    .ledger-item .meta { font-size: 0.78rem; color: var(--muted); }
+
+    .ledger-item .dump-preview {
+      font-size: 0.95rem;
+      line-height: 1.5;
+      margin-bottom: 8px;
+    }
+
+    .ledger-item .meta {
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
     .seeded-label {
       font-size: 0.7rem;
       background: #3a2d00;
@@ -309,496 +442,588 @@
       color: var(--muted);
       z-index: 50;
     }
-    .stats-bar span { white-space: nowrap; }
-    .stats-bar .val { color: var(--text); font-weight: 600; }
 
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-      .link-btn { background: none; border: none; color: var(--muted); text-decoration: underline;
-      cursor: pointer; margin-left: 12px; font: inherit; font-size: .9rem; }
-    .link-btn:hover { color: var(--text); }
-    .steps-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
-      padding: 18px 20px; margin-bottom: 32px; }
-    .steps-panel h2 { font-size: 1rem; margin-bottom: 4px; }
-    .steps-sub { color: var(--muted); font-size: .85rem; margin-bottom: 8px; line-height: 1.5; }
-    .step-row { padding: 12px 0; border-top: 1px solid var(--border); }
-    .step-text { font-size: .95rem; line-height: 1.5; }
-    .step-meta { color: var(--muted); font-size: .8rem; margin: 4px 0 8px; }
-    .step-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-    .step-actions button { background: none; border: 1px solid var(--border); color: var(--text); border-radius: 999px;
-      padding: 6px 14px; font: inherit; font-size: .85rem; cursor: pointer; }
-    .step-actions button:hover, .step-actions button:focus-visible { border-color: var(--accent); outline: none; }
-    .review-note { color: var(--muted); font-size: .9rem; margin-bottom: 20px; line-height: 1.6; }
+    .stats-bar span {
+      white-space: nowrap;
+    }
+
+    .stats-bar .val {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .link-btn {
+      background: none;
+      border: none;
+      color: var(--muted);
+      text-decoration: underline;
+      cursor: pointer;
+      margin-left: 12px;
+      font: inherit;
+      font-size: .9rem;
+    }
+
+    .link-btn:hover {
+      color: var(--text);
+    }
+
+    .steps-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      margin-bottom: 32px;
+    }
+
+    .steps-panel h2 {
+      font-size: 1rem;
+      margin-bottom: 4px;
+    }
+
+    .steps-sub {
+      color: var(--muted);
+      font-size: .85rem;
+      margin-bottom: 8px;
+      line-height: 1.5;
+    }
+
+    .step-row {
+      padding: 12px 0;
+      border-top: 1px solid var(--border);
+    }
+
+    .step-text {
+      font-size: .95rem;
+      line-height: 1.5;
+    }
+
+    .step-meta {
+      color: var(--muted);
+      font-size: .8rem;
+      margin: 4px 0 8px;
+    }
+
+    .step-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .step-actions button {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 999px;
+      padding: 6px 14px;
+      font: inherit;
+      font-size: .85rem;
+      cursor: pointer;
+    }
+
+    .step-actions button:hover,
+    .step-actions button:focus-visible {
+      border-color: var(--accent);
+      outline: none;
+    }
+
+    .review-note {
+      color: var(--muted);
+      font-size: .9rem;
+      margin-bottom: 20px;
+      line-height: 1.6;
+    }
   </style>
 </head>
+
 <body>
 
-<header>
-  <div class="logo">fun<span>nel</span></div>
-  <button class="ledger-btn" onclick="openLedger()">Ledger ↗</button>
-</header>
+  <header>
+    <div class="logo">fun<span>nel</span></div>
+    <button class="ledger-btn" onclick="openLedger()">Ledger ↗</button>
+  </header>
 
-<main>
-  <!-- STATE 1: DUMP -->
-  <div id="state-dump" class="state active">
-    <div id="steps-panel" class="steps-panel" style="display:none;">
-      <h2>Your next steps</h2>
-      <p class="steps-sub" id="steps-sub"></p>
-      <div id="steps-list"></div>
-      <button class="link-btn" style="margin-left:0;margin-top:10px;" onclick="remindTonight()">Remind me tonight (adds to your calendar)</button>
-    </div>
-    <p class="tagline">I only ask questions. You decide.</p>
-    <h1>What are you carrying around in your head?</h1>
-    <p style="color:var(--muted);font-size:0.9rem;margin:10px 0 24px;line-height:1.6;">
-      Dump it out — messy, half-formed, contradictory. All of it.
-    </p>
-    <textarea id="dump-input" placeholder="e.g. I've been going back and forth for weeks about whether to rewrite the backend or keep shipping features..."></textarea>
-    <button class="primary-btn" id="dump-btn" onclick="startSession()">Start →</button>
-  </div>
-
-  <!-- STATE 2: DISCOVER -->
-  <div id="state-discover" class="state">
-    <div id="memory-card" class="memory-card" style="display:none;">
-      <h3>💭 What I remembered</h3>
-      <p id="memory-text"></p>
+  <main>
+    <!-- STATE 1: DUMP -->
+    <div id="state-dump" class="state active">
+      <div id="steps-panel" class="steps-panel" style="display:none;">
+        <h2>Your next steps</h2>
+        <p class="steps-sub" id="steps-sub"></p>
+        <div id="steps-list"></div>
+        <button class="link-btn" style="margin-left:0;margin-top:10px;" onclick="remindTonight()">Remind me tonight
+          (adds to your calendar)</button>
+      </div>
+      <p class="tagline">I only ask questions. You decide.</p>
+      <h1>What are you carrying around in your head?</h1>
+      <p style="color:var(--muted);font-size:0.9rem;margin:10px 0 24px;line-height:1.6;">
+        Dump it out — messy, half-formed, contradictory. All of it.
+      </p>
+      <textarea id="dump-input"
+        placeholder="e.g. I've been going back and forth for weeks about whether to rewrite the backend or keep shipping features..."></textarea>
+      <button class="primary-btn" id="dump-btn" onclick="startSession()">Start →</button>
     </div>
 
-    <div id="question-bubble" class="question-bubble">
-      <span class="loading-dots">Thinking…</span>
-    </div>
-
-    <div class="answer-area">
-      <textarea id="answer-input" placeholder="Take your time…" onkeydown="handleAnswerKey(event)"></textarea>
-      <button class="primary-btn" id="send-btn" onclick="sendAnswer()">Send →</button>
-      <button class="link-btn" onclick="goToCommit()">I know where I've landed</button>
-    </div>
-
-    <div id="offer-hint" style="display:none;margin-top:14px;color:var(--muted);font-size:.9rem;">
-      Whenever you feel ready, you can write down where you landed.
-      <button class="link-btn" style="margin-left:6px;" onclick="goToCommit()">Write it down</button>
-    </div>
-
-    <div id="guard-badge-wrap" style="margin-top:8px;display:none;">
-      <span class="guard-badge">✓ Guard: question only</span>
-    </div>
-  </div>
-
-  <!-- STATE 3: COMMIT -->
-  <div id="state-commit" class="state">
-    <h1 style="margin-bottom:8px;">Where did you land?</h1>
-    <p style="color:var(--muted);font-size:0.9rem;margin-bottom:24px;line-height:1.6;">
-      Say it your way: what you decided, and what you'll do next. I'll sort it out.
-    </p>
-
-    <div id="wrap-step">
-      <textarea id="wrap-input" placeholder="e.g. I'll keep shipping for 6 more weeks. Tomorrow at 10am I'll write down three prices."></textarea>
-      <button class="primary-btn" id="wrap-btn" onclick="wrapUp()">Done →</button>
-    </div>
-
-    <div id="review-step" style="display:none;">
-      <p class="review-note">Here's what I heard, in your words. Fix anything that's off, then save.</p>
-
-      <div class="commit-section">
-        <label>My conclusion</label>
-        <textarea id="conclusion-input"></textarea>
+    <!-- STATE 2: DISCOVER -->
+    <div id="state-discover" class="state">
+      <div id="memory-card" class="memory-card" style="display:none;">
+        <h3>💭 What I remembered</h3>
+        <p id="memory-text"></p>
       </div>
 
-      <div class="commit-section">
-        <label>Kind of conclusion</label>
-        <div class="kind-row">
-          <button class="kind-btn selected" data-kind="decided" onclick="selectKind(this)">Decided ✓</button>
-          <button class="kind-btn" data-kind="need_more_info" onclick="selectKind(this)">Need more info</button>
-          <button class="kind-btn" data-kind="parked" onclick="selectKind(this)">Parked</button>
+      <div id="question-bubble" class="question-bubble">
+        <span class="loading-dots">Thinking…</span>
+      </div>
+
+      <div class="answer-area">
+        <textarea id="answer-input" placeholder="Take your time…" onkeydown="handleAnswerKey(event)"></textarea>
+        <button class="primary-btn" id="send-btn" onclick="sendAnswer()">Send →</button>
+        <button class="link-btn" onclick="goToCommit()">I know where I've landed</button>
+      </div>
+
+      <div id="offer-hint" style="display:none;margin-top:14px;color:var(--muted);font-size:.9rem;">
+        Whenever you feel ready, you can write down where you landed.
+        <button class="link-btn" style="margin-left:6px;" onclick="goToCommit()">Write it down</button>
+      </div>
+
+      <div id="guard-badge-wrap" style="margin-top:8px;display:none;">
+        <span class="guard-badge">✓ Guard: question only</span>
+      </div>
+    </div>
+
+    <!-- STATE 3: COMMIT -->
+    <div id="state-commit" class="state">
+      <h1 style="margin-bottom:8px;">Where did you land?</h1>
+      <p style="color:var(--muted);font-size:0.9rem;margin-bottom:24px;line-height:1.6;">
+        Say it your way: what you decided, and what you'll do next. I'll sort it out.
+      </p>
+
+      <div id="wrap-step">
+        <textarea id="wrap-input"
+          placeholder="e.g. I'll keep shipping for 6 more weeks. Tomorrow at 10am I'll write down three prices."></textarea>
+        <button class="primary-btn" id="wrap-btn" onclick="wrapUp()">Done →</button>
+      </div>
+
+      <div id="review-step" style="display:none;">
+        <p class="review-note">Here's what I heard, in your words. Fix anything that's off, then save.</p>
+
+        <div class="commit-section">
+          <label>My conclusion</label>
+          <textarea id="conclusion-input"></textarea>
         </div>
+
+        <div class="commit-section">
+          <label>Kind of conclusion</label>
+          <div class="kind-row">
+            <button class="kind-btn selected" data-kind="decided" onclick="selectKind(this)">Decided ✓</button>
+            <button class="kind-btn" data-kind="need_more_info" onclick="selectKind(this)">Need more info</button>
+            <button class="kind-btn" data-kind="parked" onclick="selectKind(this)">Parked</button>
+          </div>
+        </div>
+
+        <div class="commit-section">
+          <label>My next step</label>
+          <textarea id="nextstep-input" placeholder="Leave empty if you don't have one yet."></textarea>
+        </div>
+
+        <div class="commit-section">
+          <label for="revisit-input">Revisit date (optional)</label>
+          <input type="date" id="revisit-input" />
+        </div>
+
+        <button class="primary-btn" onclick="saveCommit()">Save →</button>
+        <button class="link-btn" onclick="backToWrap()">Back</button>
       </div>
 
-      <div class="commit-section">
-        <label>My next step</label>
-        <textarea id="nextstep-input" placeholder="Leave empty if you don't have one yet."></textarea>
+      <!-- Timeline echo -->
+      <div id="timeline-section" class="timeline-section" style="display:none;">
+        <h2>📚 A past decision echoing into this one</h2>
+        <div id="timeline-items"></div>
       </div>
-
-      <div class="commit-section">
-        <label for="revisit-input">Revisit date (optional)</label>
-        <input type="date" id="revisit-input" />
-      </div>
-
-      <button class="primary-btn" onclick="saveCommit()">Save →</button>
-      <button class="link-btn" onclick="backToWrap()">Back</button>
     </div>
+  </main>
 
-    <!-- Timeline echo -->
-    <div id="timeline-section" class="timeline-section" style="display:none;">
-      <h2>📚 A past decision echoing into this one</h2>
-      <div id="timeline-items"></div>
+  <!-- Ledger overlay -->
+  <div class="overlay" id="ledger-overlay" onclick="closeLedgerOutside(event)">
+    <div class="overlay-panel">
+      <button class="close-btn" onclick="closeLedger()">×</button>
+      <h2>Decision Ledger</h2>
+      <div id="ledger-list">
+        <p style="color:var(--muted)">No decisions yet.</p>
+      </div>
     </div>
   </div>
-</main>
 
-<!-- Ledger overlay -->
-<div class="overlay" id="ledger-overlay" onclick="closeLedgerOutside(event)">
-  <div class="overlay-panel">
-    <button class="close-btn" onclick="closeLedger()">×</button>
-    <h2>Decision Ledger</h2>
-    <div id="ledger-list"><p style="color:var(--muted)">No decisions yet.</p></div>
+  <!-- Stats bar -->
+  <div class="stats-bar">
+    <span>Guard rejections: <span class="val" id="stat-rejections">–</span></span>
+    <span>Turns this session: <span class="val" id="stat-turns">0</span></span>
+    <span>Ledger entries: <span class="val" id="stat-ledger">–</span></span>
   </div>
-</div>
 
-<!-- Stats bar -->
-<div class="stats-bar">
-  <span>Guard rejections: <span class="val" id="stat-rejections">–</span></span>
-  <span>Turns this session: <span class="val" id="stat-turns">0</span></span>
-  <span>Ledger entries: <span class="val" id="stat-ledger">–</span></span>
-</div>
+  <script>
+    const API = '';  // same origin
 
-<script>
-  const API = '';  // same origin
+    // ---- Who is this? A random id kept in this browser. ?user=demo-ravi loads the seeded demo. ----
+    function getUserId() {
+      const fromUrl = new URLSearchParams(location.search).get('user');
+      if (fromUrl) return fromUrl;
+      try {
+        let id = localStorage.getItem('funnel_user_id');
+        if (!id) {
+          id = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2));
+          localStorage.setItem('funnel_user_id', id);
+        }
+        return id;
+      } catch (_) { return 'anon-' + Date.now(); }
+    }
+    const USER_ID = getUserId();
+    function directOptIn() { try { return localStorage.getItem('funnel_direct') === '1'; } catch (_) { return false; } }
 
-  // ---- Who is this? A random id kept in this browser. ?user=demo-ravi loads the seeded demo. ----
-  function getUserId() {
-    const fromUrl = new URLSearchParams(location.search).get('user');
-    if (fromUrl) return fromUrl;
-    try {
-      let id = localStorage.getItem('funnel_user_id');
-      if (!id) {
-        id = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2));
-        localStorage.setItem('funnel_user_id', id);
+    let sessionId = null, turnCount = 0, currentKind = 'decided', hasMemory = false, busy = false;
+
+    // ---- Small helpers (user text is only ever set with textContent: never parsed as HTML) ----
+    function el(tag, cls, text) {
+      const n = document.createElement(tag);
+      if (cls) n.className = cls;
+      if (text !== undefined && text !== null) n.textContent = text;
+      return n;
+    }
+    function truncate(str, n) { str = str || ''; return str.length > n ? str.slice(0, n) + '…' : str; }
+    function formatDate(iso) {
+      const d = new Date(iso);
+      return isNaN(d) ? '' : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+    function showError(msg) {
+      let t = document.getElementById('toast');
+      if (!t) {
+        t = el('div'); t.id = 'toast'; t.setAttribute('role', 'alert');
+        t.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:56px;max-width:90vw;' +
+          'background:#2b2a28;color:#fff;padding:10px 16px;border-radius:10px;font-size:.9rem;z-index:100;';
+        document.body.appendChild(t);
       }
-      return id;
-    } catch (_) { return 'anon-' + Date.now(); }
-  }
-  const USER_ID = getUserId();
-  function directOptIn() { try { return localStorage.getItem('funnel_direct') === '1'; } catch (_) { return false; } }
-
-  let sessionId = null, turnCount = 0, currentKind = 'decided', hasMemory = false, busy = false;
-
-  // ---- Small helpers (user text is only ever set with textContent: never parsed as HTML) ----
-  function el(tag, cls, text) {
-    const n = document.createElement(tag);
-    if (cls) n.className = cls;
-    if (text !== undefined && text !== null) n.textContent = text;
-    return n;
-  }
-  function truncate(str, n) { str = str || ''; return str.length > n ? str.slice(0, n) + '…' : str; }
-  function formatDate(iso) {
-    const d = new Date(iso);
-    return isNaN(d) ? '' : d.toLocaleDateString('en-GB', {day: 'numeric', month: 'short', year: 'numeric'});
-  }
-  function showError(msg) {
-    let t = document.getElementById('toast');
-    if (!t) {
-      t = el('div'); t.id = 'toast'; t.setAttribute('role', 'alert');
-      t.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:56px;max-width:90vw;' +
-        'background:#2b2a28;color:#fff;padding:10px 16px;border-radius:10px;font-size:.9rem;z-index:100;';
-      document.body.appendChild(t);
+      t.textContent = msg; t.style.display = 'block';
+      clearTimeout(showError._t); showError._t = setTimeout(() => { t.style.display = 'none'; }, 5000);
     }
-    t.textContent = msg; t.style.display = 'block';
-    clearTimeout(showError._t); showError._t = setTimeout(() => { t.style.display = 'none'; }, 5000);
-  }
-  async function api(path, opts = {}) {
-    const res = await fetch(API + path, {
-      ...opts,
-      headers: {'Content-Type': 'application/json', 'X-User-Id': USER_ID, ...(opts.headers || {})}
-    });
-    let data = null;
-    try { data = await res.json(); } catch (_) {}
-    if (!res.ok) {
-      const err = new Error((data && typeof data.detail === 'string') ? data.detail : 'Something went wrong. Please try again.');
-      err.status = res.status; throw err;
-    }
-    return data;
-  }
-
-  // ---- State transitions ----
-  function showState(id) {
-    document.querySelectorAll('.state').forEach(s => s.classList.remove('active'));
-    document.getElementById(id).classList.add('active');
-  }
-  function resetToDump() {
-    sessionId = null; turnCount = 0; hasMemory = false;
-    document.getElementById('dump-input').value = '';
-    const b = document.getElementById('dump-btn'); b.disabled = false; b.textContent = 'Start →';
-    document.getElementById('memory-card').style.display = 'none';
-    document.getElementById('timeline-section').style.display = 'none';
-    document.getElementById('answer-input').style.display = '';
-    const send = document.getElementById('send-btn'); send.textContent = 'Send →'; send.onclick = sendAnswer;
-    document.getElementById('wrap-input').value = '';
-    document.getElementById('offer-hint').style.display = 'none';
-    backToWrap();
-    showState('state-dump');
-    loadSteps();
-  }
-
-  // ---- Start session ----
-  async function startSession() {
-    const dump = document.getElementById('dump-input').value.trim();
-    if (!dump || busy) return;
-    const btn = document.getElementById('dump-btn');
-    busy = true; btn.disabled = true; btn.textContent = 'Reading…';
-    try {
-      const data = await api('/session', {method: 'POST', body: JSON.stringify({dump, direct_opt_in: directOptIn()})});
-      sessionId = data.session_id; turnCount = 0;
-      showState('state-discover');
-      renderMemory(data.memory);
-      displayTurn(data.first_turn);
-      document.getElementById('answer-input').focus();
-      // ---- Your next steps: the user's own words, with check-in buttons ----
-  async function loadSteps() {
-    const panel = document.getElementById('steps-panel');
-    let steps = [];
-    try {
-      const all = await api('/decisions');
-      steps = all.filter(d => d.next_step && (d.step_status === 'open' || d.step_status === 'not_yet')).slice(0, 5);
-    } catch (_) {}
-    const list = document.getElementById('steps-list'); list.replaceChildren();
-    if (!steps.length) { panel.style.display = 'none'; return; }
-    document.getElementById('steps-sub').textContent = 'How did these go? Answer however it went. "Not yet" is a fine answer.';
-    steps.forEach(d => {
-      const row = el('div', 'step-row');
-      row.appendChild(el('div', 'step-text', d.next_step));
-      row.appendChild(el('div', 'step-meta', 'From: ' + truncate(d.dump, 70) +
-        (d.revisit_date ? ' · revisit ' + formatDate(d.revisit_date) : '') + (d.seeded ? ' · demo' : '')));
-      const actions = el('div', 'step-actions');
-      [['Done', 'done'], ['Not yet', 'not_yet'], ['Drop it', 'dropped']].forEach(([label, status]) => {
-        const b = el('button', '', label); b.type = 'button';
-        b.addEventListener('click', () => stepAction(d.id, status)); actions.appendChild(b);
+    async function api(path, opts = {}) {
+      const res = await fetch(API + path, {
+        ...opts,
+        headers: { 'Content-Type': 'application/json', 'X-User-Id': USER_ID, ...(opts.headers || {}) }
       });
-      row.appendChild(actions); list.appendChild(row);
-    });
-    panel.style.display = 'block';
-  }
-  async function stepAction(id, status) {
-    if (busy) return; busy = true;
-    try {
-      if (status === 'not_yet') {                       // a questions-only session about that step
-        const data = await api('/session/from-step', {method: 'POST', body: JSON.stringify({decision_id: id, direct_opt_in: directOptIn()})});
+      let data = null;
+      try { data = await res.json(); } catch (_) { }
+      if (!res.ok) {
+        const err = new Error((data && typeof data.detail === 'string') ? data.detail : 'Something went wrong. Please try again.');
+        err.status = res.status; throw err;
+      }
+      return data;
+    }
+
+    // ---- State transitions ----
+    function showState(id) {
+      document.querySelectorAll('.state').forEach(s => s.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+    }
+    function resetToDump() {
+      sessionId = null; turnCount = 0; hasMemory = false;
+      document.getElementById('dump-input').value = '';
+      const b = document.getElementById('dump-btn'); b.disabled = false; b.textContent = 'Start →';
+      document.getElementById('memory-card').style.display = 'none';
+      document.getElementById('timeline-section').style.display = 'none';
+      document.getElementById('answer-input').style.display = '';
+      const send = document.getElementById('send-btn'); send.textContent = 'Send →'; send.onclick = sendAnswer;
+      document.getElementById('wrap-input').value = '';
+      document.getElementById('offer-hint').style.display = 'none';
+      backToWrap();
+      showState('state-dump');
+      loadSteps();
+    }
+
+    // ---- Start session ----
+    async function startSession() {
+      const dump = document.getElementById('dump-input').value.trim();
+      if (!dump || busy) return;
+      const btn = document.getElementById('dump-btn');
+      busy = true; btn.disabled = true; btn.textContent = 'Reading…';
+      try {
+        const data = await api('/session', { method: 'POST', body: JSON.stringify({ dump, direct_opt_in: directOptIn() }) });
         sessionId = data.session_id; turnCount = 0;
-        showState('state-discover'); renderMemory(data.memory); displayTurn(data.first_turn);
+        showState('state-discover');
+        renderMemory(data.memory);
+        displayTurn(data.first_turn);
         document.getElementById('answer-input').focus();
-      } else {
-        await api('/decisions/' + id + '/step', {method: 'POST', body: JSON.stringify({status})});
-        showError(status === 'done' ? 'Marked done.' : 'Dropped. No pressure.');
-        await loadSteps();
+        updateStats();
+      } catch (e) {
+        btn.disabled = false; btn.textContent = 'Start →';
+        showError(e.message);
+      } finally { busy = false; }
+    }
+
+    // ---- Display a turn ----
+    function displayTurn(turn) {
+      document.getElementById('question-bubble').textContent = turn.text;
+      document.getElementById('guard-badge-wrap').style.display = (turn.type === 'question') ? 'block' : 'none';
+      if (turn.offer) document.getElementById('offer-hint').style.display = 'block';   // soft hint, never blocks
+    }
+
+    // ---- Memory card: built from the server's counted facts ----
+    function renderMemory(p) {
+      const card = document.getElementById('memory-card');
+      const text = document.getElementById('memory-text');
+      card.querySelectorAll('.memory-extra').forEach(n => n.remove());
+      const loop = p && p.times_raised > 1, echoes = (p && p.echoes) || [];
+      hasMemory = !!(loop || echoes.length);
+      if (!hasMemory) { card.style.display = 'none'; return; }
+
+      const lines = [];
+      if (loop) {
+        lines.push('This decision has come up ' + p.times_raised + ' times.');
+        if (p.previous) {
+          const kind = { decided: 'decided', need_more_info: 'needed more information', parked: 'parked it' }[p.previous.kind] || p.previous.kind;
+          lines.push('Last time you ' + kind + (p.previous.conclusion ? ': \u201c' + truncate(p.previous.conclusion, 100) + '\u201d' : '') + '.');
+          if (p.revisit_overdue) lines.push('The revisit date you set has passed.');
+        }
       }
-      updateStats();
-    } catch (e) { showError(e.message); } finally { busy = false; }
-  }
-
-  // ---- A calendar reminder the USER chooses (no push notifications from us) ----
-  function buildIcs(now, url) {
-    const pad = n => String(n).padStart(2, '0');
-    const esc = t => String(t).replace(/[\\;,]/g, m => '\\' + m);
-    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 20, 0, 0);
-    if (start <= now) start.setDate(start.getDate() + 1);
-    const end = new Date(start.getTime() + 15 * 60000);
-    const local = d => d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + 'T' + pad(d.getHours()) + pad(d.getMinutes()) + '00';
-    const stamp = now.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
-    return ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Funnel//Check-in//EN', 'BEGIN:VEVENT',
-      'UID:funnel-' + now.getTime() + '@funnel', 'DTSTAMP:' + stamp,
-      'DTSTART:' + local(start), 'DTEND:' + local(end), 'SUMMARY:Funnel check-in',
-      'DESCRIPTION:' + esc('How did your next steps go? ' + url),
-      'BEGIN:VALARM', 'TRIGGER:PT0M', 'ACTION:DISPLAY', 'DESCRIPTION:Funnel check-in', 'END:VALARM',
-      'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
-  }
-  function remindTonight() {
-    const blob = new Blob([buildIcs(new Date(), location.origin + '/')], {type: 'text/calendar'});
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'funnel-checkin.ics';
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-  }
-
-  updateStats();
-  loadSteps();
-    } catch (e) {
-      btn.disabled = false; btn.textContent = 'Start →';
-      showError(e.message);
-    } finally { busy = false; }
-  }
-
-  // ---- Display a turn ----
-  function displayTurn(turn) {
-    document.getElementById('question-bubble').textContent = turn.text;
-    document.getElementById('guard-badge-wrap').style.display = (turn.type === 'question') ? 'block' : 'none';
-    if (turn.offer) document.getElementById('offer-hint').style.display = 'block';   // soft hint, never blocks
-  }
-
-  // ---- Memory card: built from the server's counted facts ----
-  function renderMemory(p) {
-    const card = document.getElementById('memory-card');
-    const text = document.getElementById('memory-text');
-    card.querySelectorAll('.memory-extra').forEach(n => n.remove());
-    const loop = p && p.times_raised > 1, echoes = (p && p.echoes) || [];
-    hasMemory = !!(loop || echoes.length);
-    if (!hasMemory) { card.style.display = 'none'; return; }
-
-    const lines = [];
-    if (loop) {
-      lines.push('This decision has come up ' + p.times_raised + ' times.');
-      if (p.previous) {
-        const kind = {decided: 'decided', need_more_info: 'needed more information', parked: 'parked it'}[p.previous.kind] || p.previous.kind;
-        lines.push('Last time you ' + kind + (p.previous.conclusion ? ': \u201c' + truncate(p.previous.conclusion, 100) + '\u201d' : '') + '.');
-        if (p.revisit_overdue) lines.push('The revisit date you set has passed.');
+      echoes.forEach(e => {
+        lines.push('A different decision with a similar worry: \u201c' + truncate(e.title, 80) + '\u201d (' + e.days_ago + ' days ago).' +
+          (e.conclusion ? ' You wrote: \u201c' + truncate(e.conclusion, 80) + '\u201d' : ''));
+      });
+      text.style.whiteSpace = 'pre-line';
+      text.textContent = lines.join('\n');
+      if (p.seeded) {
+        const tag = el('span', 'seeded-label', 'seeded demo');
+        tag.classList.add('memory-extra'); card.appendChild(tag);
       }
+      if (loop && p.times_raised >= 3) {
+        const lab = el('label', 'memory-extra'); lab.style.cssText = 'display:block;margin-top:10px;font-size:.85rem;';
+        const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = directOptIn();
+        cb.addEventListener('change', () => { try { localStorage.setItem('funnel_direct', cb.checked ? '1' : '0'); } catch (_) { } });
+        lab.append(cb, ' Be more direct when a decision keeps coming back (applies next session)');
+        card.appendChild(lab);
+      }
+      card.style.display = 'block';
+      renderTimeline(p);
     }
-    echoes.forEach(e => {
-      lines.push('A different decision with a similar worry: \u201c' + truncate(e.title, 80) + '\u201d (' + e.days_ago + ' days ago).' +
-                 (e.conclusion ? ' You wrote: \u201c' + truncate(e.conclusion, 80) + '\u201d' : ''));
-    });
-    text.style.whiteSpace = 'pre-line';
-    text.textContent = lines.join('\n');
-    if (p.seeded) {
-      const tag = el('span', 'seeded-label', 'seeded demo');
-      tag.classList.add('memory-extra'); card.appendChild(tag);
+
+    // ---- Send answer ----
+    async function sendAnswer() {
+      const input = document.getElementById('answer-input');
+      const answer = input.value.trim();
+      if (!answer || !sessionId || busy) return;
+      busy = true;
+      const bubble = document.getElementById('question-bubble');
+      const previous = bubble.textContent;
+      bubble.replaceChildren(el('span', 'loading-dots', 'Thinking…'));
+      input.value = '';
+      document.getElementById('guard-badge-wrap').style.display = 'none';
+      try {
+        const turn = await api('/session/' + sessionId + '/turn', { method: 'POST', body: JSON.stringify({ answer }) });
+        turnCount++; document.getElementById('stat-turns').textContent = turnCount;
+        displayTurn(turn); input.focus(); updateStats();
+      } catch (e) {
+        bubble.textContent = previous; input.value = answer;
+        showError(e.message);
+        if (e.status === 404) resetToDump();
+      } finally { busy = false; }
     }
-    if (loop && p.times_raised >= 3) {
-      const lab = el('label', 'memory-extra'); lab.style.cssText = 'display:block;margin-top:10px;font-size:.85rem;';
-      const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = directOptIn();
-      cb.addEventListener('change', () => { try { localStorage.setItem('funnel_direct', cb.checked ? '1' : '0'); } catch (_) {} });
-      lab.append(cb, ' Be more direct when a decision keeps coming back (applies next session)');
-      card.appendChild(lab);
+    function handleAnswerKey(e) { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) sendAnswer(); }
+
+    // ---- Commit ----
+    function goToCommit() {
+      showState('state-commit');
+      backToWrap();
+      if (hasMemory) document.getElementById('timeline-section').style.display = 'block';
+      document.getElementById('wrap-input').focus();
     }
-    card.style.display = 'block';
-    renderTimeline(p);
-  }
+    function backToWrap() {
+      document.getElementById('wrap-step').style.display = '';
+      document.getElementById('review-step').style.display = 'none';
+    }
+    function setKind(kind) {
+      document.querySelectorAll('.kind-btn').forEach(b => b.classList.toggle('selected', b.dataset.kind === kind));
+      currentKind = kind;
+      const label = document.querySelector('label[for="revisit-input"]');
+      if (label) label.textContent = kind === 'parked' ? 'Revisit date (required for parked)' : 'Revisit date (optional)';
+    }
+    function selectKind(btn) { setKind(btn.dataset.kind); }
 
-  // ---- Send answer ----
-  async function sendAnswer() {
-    const input = document.getElementById('answer-input');
-    const answer = input.value.trim();
-    if (!answer || !sessionId || busy) return;
-    busy = true;
-    const bubble = document.getElementById('question-bubble');
-    const previous = bubble.textContent;
-    bubble.replaceChildren(el('span', 'loading-dots', 'Thinking…'));
-    input.value = '';
-    document.getElementById('guard-badge-wrap').style.display = 'none';
-    try {
-      const turn = await api('/session/' + sessionId + '/turn', {method: 'POST', body: JSON.stringify({answer})});
-      turnCount++; document.getElementById('stat-turns').textContent = turnCount;
-      displayTurn(turn); input.focus(); updateStats();
-    } catch (e) {
-      bubble.textContent = previous; input.value = answer;
-      showError(e.message);
-      if (e.status === 404) resetToDump();
-    } finally { busy = false; }
-  }
-  function handleAnswerKey(e) { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) sendAnswer(); }
+    // The user writes one free-text answer. The AI only sorts what they said into fields.
+    // They review it, so nothing is saved that they didn't see.
+    async function wrapUp() {
+      const text = document.getElementById('wrap-input').value.trim();
+      if (!text || !sessionId || busy) return;
+      const btn = document.getElementById('wrap-btn');
+      busy = true; btn.disabled = true; btn.textContent = 'Reading…';
+      let proposal = null, expired = false;
+      try {
+        proposal = await api('/session/' + sessionId + '/wrap', { method: 'POST', body: JSON.stringify({ text }) });
+      } catch (e) {
+        showError(e.message); expired = e.status === 404;
+      } finally { busy = false; btn.disabled = false; btn.textContent = 'Done →'; }
+      if (expired) return resetToDump();
+      // If the AI couldn't read it, never block the user: show their own words to edit by hand.
+      proposal = proposal || { conclusion_kind: 'decided', conclusion: text, next_step: '', revisit_date: null };
+      document.getElementById('conclusion-input').value = proposal.conclusion || '';
+      document.getElementById('nextstep-input').value = proposal.next_step || '';
+      document.getElementById('revisit-input').value = proposal.revisit_date || '';
+      setKind(proposal.conclusion_kind || 'decided');
+      document.getElementById('wrap-step').style.display = 'none';
+      document.getElementById('review-step').style.display = 'block';
+    }
+    async function saveCommit() {
+      if (busy) return;
+      const conclusion = document.getElementById('conclusion-input').value.trim();
+      const next_step = document.getElementById('nextstep-input').value.trim();
+      const revisit_date = document.getElementById('revisit-input').value || null;
+      if (!conclusion) return showError('Write your conclusion in your own words first.');
+      if (currentKind === 'parked' && !revisit_date) return showError('Pick a revisit date for a parked decision.');
+      busy = true;
+      try {
+        await api('/session/' + sessionId + '/commit', {
+          method: 'POST',
+          body: JSON.stringify({ conclusion, conclusion_kind: currentKind, next_step, revisit_date })
+        });
+        showError('Saved to your ledger \u2713');
+        ['conclusion-input', 'nextstep-input', 'revisit-input'].forEach(id => { document.getElementById(id).value = ''; });
+        updateStats(); resetToDump();
+      } catch (e) { showError(e.message); if (e.status === 404) resetToDump(); }
+      finally { busy = false; }
+    }
 
-  // ---- Commit ----
-  function goToCommit() {
-    showState('state-commit');
-    backToWrap();
-    if (hasMemory) document.getElementById('timeline-section').style.display = 'block';
-    document.getElementById('wrap-input').focus();
-  }
-  function backToWrap() {
-    document.getElementById('wrap-step').style.display = '';
-    document.getElementById('review-step').style.display = 'none';
-  }
-  function setKind(kind) {
-    document.querySelectorAll('.kind-btn').forEach(b => b.classList.toggle('selected', b.dataset.kind === kind));
-    currentKind = kind;
-    const label = document.querySelector('label[for="revisit-input"]');
-    if (label) label.textContent = kind === 'parked' ? 'Revisit date (required for parked)' : 'Revisit date (optional)';
-  }
-  function selectKind(btn) { setKind(btn.dataset.kind); }
+    // ---- Timeline (dates the decision came up + echoes) ----
+    function renderTimeline(p) {
+      const box = document.getElementById('timeline-items'); box.replaceChildren();
+      const items = [];
+      (p.timeline || []).forEach(m => items.push({ date: m.date, text: 'You raised this decision', outcome: null, echo: false }));
+      (p.echoes || []).forEach(e => items.push({ date: null, text: e.title, outcome: e.conclusion, echo: true, seeded: e.seeded, ago: e.days_ago }));
+      items.slice(0, 4).forEach((it, i, arr) => {
+        const row = el('div', 'timeline-item');
+        if (i < arr.length - 1) row.appendChild(el('div', 'timeline-connector'));
+        row.appendChild(el('div', 'timeline-dot' + (it.echo && !it.outcome ? ' dim' : '')));
+        const body = el('div', 'timeline-content');
+        const date = el('div', 'timeline-date', it.date ? formatDate(it.date) : it.ago + ' days ago');
+        if (it.seeded) date.appendChild(el('span', 'seeded-label', 'seeded demo'));
+        const what = el('div', 'timeline-decision', truncate(it.text, 120));
+        if (it.echo) what.appendChild(el('span', 'echo-badge', 'echo'));
+        body.append(date, what);
+        if (it.outcome) body.appendChild(el('div', 'timeline-outcome', '\u2192 ' + it.outcome));
+        row.append(el('span'), body); box.appendChild(row);
+      });
+    }
 
-  // The user writes one free-text answer. The AI only sorts what they said into fields.
-  // They review it, so nothing is saved that they didn't see.
-  async function wrapUp() {
-    const text = document.getElementById('wrap-input').value.trim();
-    if (!text || !sessionId || busy) return;
-    const btn = document.getElementById('wrap-btn');
-    busy = true; btn.disabled = true; btn.textContent = 'Reading…';
-    let proposal = null, expired = false;
-    try {
-      proposal = await api('/session/' + sessionId + '/wrap', {method: 'POST', body: JSON.stringify({text})});
-    } catch (e) {
-      showError(e.message); expired = e.status === 404;
-    } finally { busy = false; btn.disabled = false; btn.textContent = 'Done →'; }
-    if (expired) return resetToDump();
-    // If the AI couldn't read it, never block the user: show their own words to edit by hand.
-    proposal = proposal || {conclusion_kind: 'decided', conclusion: text, next_step: '', revisit_date: null};
-    document.getElementById('conclusion-input').value = proposal.conclusion || '';
-    document.getElementById('nextstep-input').value = proposal.next_step || '';
-    document.getElementById('revisit-input').value = proposal.revisit_date || '';
-    setKind(proposal.conclusion_kind || 'decided');
-    document.getElementById('wrap-step').style.display = 'none';
-    document.getElementById('review-step').style.display = 'block';
-  }
-  async function saveCommit() {
-    if (busy) return;
-    const conclusion = document.getElementById('conclusion-input').value.trim();
-    const next_step = document.getElementById('nextstep-input').value.trim();
-    const revisit_date = document.getElementById('revisit-input').value || null;
-    if (!conclusion) return showError('Write your conclusion in your own words first.');
-    if (currentKind === 'parked' && !revisit_date) return showError('Pick a revisit date for a parked decision.');
-    busy = true;
-    try {
-      await api('/session/' + sessionId + '/commit', {method: 'POST',
-        body: JSON.stringify({conclusion, conclusion_kind: currentKind, next_step, revisit_date})});
-      showError('Saved to your ledger \u2713');
-      ['conclusion-input', 'nextstep-input', 'revisit-input'].forEach(id => { document.getElementById(id).value = ''; });
-      updateStats(); resetToDump();
-    } catch (e) { showError(e.message); if (e.status === 404) resetToDump(); }
-    finally { busy = false; }
-  }
+    // ---- Ledger overlay ----
+    async function openLedger() {
+      document.getElementById('ledger-overlay').classList.add('open');
+      const list = document.getElementById('ledger-list');
+      list.replaceChildren(el('p', '', 'Loading…'));
+      try {
+        const decisions = await api('/decisions');
+        document.getElementById('stat-ledger').textContent = decisions.length;
+        if (!decisions.length) { list.replaceChildren(el('p', '', 'No decisions yet.')); return; }
+        list.replaceChildren(...decisions.map(d => {
+          const item = el('div', 'ledger-item');
+          const prev = el('div', 'dump-preview', truncate(d.dump, 140));
+          if (d.seeded) prev.appendChild(el('span', 'seeded-label', 'seeded demo'));
+          const meta = el('div', 'meta');
+          const kind = { decided: 'Decided', need_more_info: 'Needed more info', parked: 'Parked' }[d.conclusion_kind];
+          meta.append(formatDate(d.created_at) + ' · ');
+          if (d.conclusion) { meta.append((kind || 'Concluded') + ': '); meta.appendChild(el('em', '', truncate(d.conclusion, 60))); }
+          else meta.append('In progress');
+          if (d.times_raised > 1) meta.append(' · raised ' + d.times_raised + ' times');
+          if (d.revisit_date) meta.append(' · Revisit ' + d.revisit_date);
+          item.append(prev, meta); return item;
+        }));
+      } catch (e) { list.replaceChildren(el('p', '', e.message)); }
+    }
+    function closeLedger() { document.getElementById('ledger-overlay').classList.remove('open'); }
+    function closeLedgerOutside(e) { if (e.target === document.getElementById('ledger-overlay')) closeLedger(); }
 
-  // ---- Timeline (dates the decision came up + echoes) ----
-  function renderTimeline(p) {
-    const box = document.getElementById('timeline-items'); box.replaceChildren();
-    const items = [];
-    (p.timeline || []).forEach(m => items.push({date: m.date, text: 'You raised this decision', outcome: null, echo: false}));
-    (p.echoes || []).forEach(e => items.push({date: null, text: e.title, outcome: e.conclusion, echo: true, seeded: e.seeded, ago: e.days_ago}));
-    items.slice(0, 4).forEach((it, i, arr) => {
-      const row = el('div', 'timeline-item');
-      if (i < arr.length - 1) row.appendChild(el('div', 'timeline-connector'));
-      row.appendChild(el('div', 'timeline-dot' + (it.echo && !it.outcome ? ' dim' : '')));
-      const body = el('div', 'timeline-content');
-      const date = el('div', 'timeline-date', it.date ? formatDate(it.date) : it.ago + ' days ago');
-      if (it.seeded) date.appendChild(el('span', 'seeded-label', 'seeded demo'));
-      const what = el('div', 'timeline-decision', truncate(it.text, 120));
-      if (it.echo) what.appendChild(el('span', 'echo-badge', 'echo'));
-      body.append(date, what);
-      if (it.outcome) body.appendChild(el('div', 'timeline-outcome', '\u2192 ' + it.outcome));
-      row.append(el('span'), body); box.appendChild(row);
-    });
-  }
+    // ---- Stats bar: real numbers from the server ----
+    async function updateStats() {
+      try {
+        const [s, d] = await Promise.all([api('/stats'), api('/decisions')]);
+        document.getElementById('stat-rejections').textContent = s.guard_rejected + ' of ' + s.guard_checked + ' replies';
+        document.getElementById('stat-ledger').textContent = d.length;
+      } catch (_) { }
+    }
+    // ---- Your next steps: the user's own words, with check-in buttons ----
+    async function loadSteps() {
+      const panel = document.getElementById('steps-panel');
+      let steps = [];
+      try {
+        const all = await api('/decisions');
+        steps = all.filter(d => d.next_step && (d.step_status === 'open' || d.step_status === 'not_yet')).slice(0, 5);
+      } catch (_) { }
+      const list = document.getElementById('steps-list'); list.replaceChildren();
+      if (!steps.length) { panel.style.display = 'none'; return; }
+      document.getElementById('steps-sub').textContent = 'How did these go? Answer however it went. "Not yet" is a fine answer.';
+      steps.forEach(d => {
+        const row = el('div', 'step-row');
+        row.appendChild(el('div', 'step-text', d.next_step));
+        row.appendChild(el('div', 'step-meta', 'From: ' + truncate(d.dump, 70) +
+          (d.revisit_date ? ' · revisit ' + formatDate(d.revisit_date) : '') + (d.seeded ? ' · demo' : '')));
+        const actions = el('div', 'step-actions');
+        [['Done', 'done'], ['Not yet', 'not_yet'], ['Drop it', 'dropped']].forEach(([label, status]) => {
+          const b = el('button', '', label); b.type = 'button';
+          b.addEventListener('click', () => stepAction(d.id, status)); actions.appendChild(b);
+        });
+        row.appendChild(actions); list.appendChild(row);
+      });
+      panel.style.display = 'block';
+    }
+    async function stepAction(id, status) {
+      if (busy) return; busy = true;
+      try {
+        if (status === 'not_yet') {                       // a questions-only session about that step
+          const data = await api('/session/from-step', { method: 'POST', body: JSON.stringify({ decision_id: id, direct_opt_in: directOptIn() }) });
+          sessionId = data.session_id; turnCount = 0;
+          showState('state-discover'); renderMemory(data.memory); displayTurn(data.first_turn);
+          document.getElementById('answer-input').focus();
+        } else {
+          await api('/decisions/' + id + '/step', { method: 'POST', body: JSON.stringify({ status }) });
+          showError(status === 'done' ? 'Marked done.' : 'Dropped. No pressure.');
+          await loadSteps();
+        }
+        updateStats();
+      } catch (e) { showError(e.message); } finally { busy = false; }
+    }
 
-  // ---- Ledger overlay ----
-  async function openLedger() {
-    document.getElementById('ledger-overlay').classList.add('open');
-    const list = document.getElementById('ledger-list');
-    list.replaceChildren(el('p', '', 'Loading…'));
-    try {
-      const decisions = await api('/decisions');
-      document.getElementById('stat-ledger').textContent = decisions.length;
-      if (!decisions.length) { list.replaceChildren(el('p', '', 'No decisions yet.')); return; }
-      list.replaceChildren(...decisions.map(d => {
-        const item = el('div', 'ledger-item');
-        const prev = el('div', 'dump-preview', truncate(d.dump, 140));
-        if (d.seeded) prev.appendChild(el('span', 'seeded-label', 'seeded demo'));
-        const meta = el('div', 'meta');
-        const kind = {decided: 'Decided', need_more_info: 'Needed more info', parked: 'Parked'}[d.conclusion_kind];
-        meta.append(formatDate(d.created_at) + ' · ');
-        if (d.conclusion) { meta.append((kind || 'Concluded') + ': '); meta.appendChild(el('em', '', truncate(d.conclusion, 60))); }
-        else meta.append('In progress');
-        if (d.times_raised > 1) meta.append(' · raised ' + d.times_raised + ' times');
-        if (d.revisit_date) meta.append(' · Revisit ' + d.revisit_date);
-        item.append(prev, meta); return item;
-      }));
-    } catch (e) { list.replaceChildren(el('p', '', e.message)); }
-  }
-  function closeLedger() { document.getElementById('ledger-overlay').classList.remove('open'); }
-  function closeLedgerOutside(e) { if (e.target === document.getElementById('ledger-overlay')) closeLedger(); }
+    // ---- A calendar reminder the USER chooses (no push notifications from us) ----
+    function buildIcs(now, url) {
+      const pad = n => String(n).padStart(2, '0');
+      const esc = t => String(t).replace(/[\\;,]/g, m => '\\' + m);
+      const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 20, 0, 0);
+      if (start <= now) start.setDate(start.getDate() + 1);
+      const end = new Date(start.getTime() + 15 * 60000);
+      const local = d => d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + 'T' + pad(d.getHours()) + pad(d.getMinutes()) + '00';
+      const stamp = now.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+      return ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Funnel//Check-in//EN', 'BEGIN:VEVENT',
+        'UID:funnel-' + now.getTime() + '@funnel', 'DTSTAMP:' + stamp,
+        'DTSTART:' + local(start), 'DTEND:' + local(end), 'SUMMARY:Funnel check-in',
+        'DESCRIPTION:' + esc('How did your next steps go? ' + url),
+        'BEGIN:VALARM', 'TRIGGER:PT0M', 'ACTION:DISPLAY', 'DESCRIPTION:Funnel check-in', 'END:VALARM',
+        'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
+    }
+    function remindTonight() {
+      const blob = new Blob([buildIcs(new Date(), location.origin + '/')], { type: 'text/calendar' });
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'funnel-checkin.ics';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    }
 
-  // ---- Stats bar: real numbers from the server ----
-  async function updateStats() {
-    try {
-      const [s, d] = await Promise.all([api('/stats'), api('/decisions')]);
-      document.getElementById('stat-rejections').textContent = s.guard_rejected + ' of ' + s.guard_checked + ' replies';
-      document.getElementById('stat-ledger').textContent = d.length;
-    } catch (_) {}
-  }
-  updateStats();
-</script>
+    updateStats();
+    loadSteps();
+  </script>
 </body>
+
 </html>
